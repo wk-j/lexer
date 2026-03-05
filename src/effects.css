@@ -122,10 +122,9 @@
   background-clip: text;
 }
 
-/* Section divider glow below h2 */
+/* Section divider spacing below h2 */
 .content-panel h2 {
   padding-bottom: 10px;
-  box-shadow: 0 1px 12px -4px var(--accent);
 }
 
 /* Underline reveal on scroll-in */

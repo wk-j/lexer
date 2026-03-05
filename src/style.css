@@ -93,6 +93,7 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 2rem 3rem;
+  padding-top: 3rem; /* extra space for transparent titlebar */
   max-width: 900px;
   margin: 0 auto;
   width: 100%;

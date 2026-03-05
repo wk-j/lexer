@@ -13,7 +13,9 @@
         "title": "Lexer",
         "width": 960,
         "height": 720,
-        "resizable": true
+        "resizable": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
       }
     ],
     "security": {
