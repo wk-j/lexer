@@ -2,13 +2,13 @@ use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::UNIX_EPOCH;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use walkdir::WalkDir;
 
 use crate::fs::FileWatcher;
 use crate::highlight::LanguageRegistry;
 use crate::markdown::{render_markdown, TocEntry};
-use crate::state::{AppState, BufferState};
+use crate::state::{AppState, BufferState, LayoutMode};
 use crate::theme::{ThemeEngine, ThemeInfo};
 
 // --- Response types ---
@@ -541,4 +541,98 @@ pub fn get_active_theme(
 ) -> Result<String, String> {
     let engine = theme_engine.lock().map_err(|e| e.to_string())?;
     Ok(engine.active_theme.clone())
+}
+
+// --- Layout commands ---
+
+#[tauri::command]
+pub fn set_layout(
+    layout: String,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<String, String> {
+    let mode = match layout.as_str() {
+        "default" => LayoutMode::Default,
+        "focus" => LayoutMode::Focus,
+        "zen" => LayoutMode::Zen,
+        "split" => LayoutMode::Split,
+        _ => return Err(format!("Unknown layout: {}", layout)),
+    };
+    let mut st = state.lock().map_err(|e| e.to_string())?;
+    st.layout = mode;
+    Ok(layout)
+}
+
+#[tauri::command]
+pub fn get_layout(state: State<'_, Arc<Mutex<AppState>>>) -> Result<String, String> {
+    let st = state.lock().map_err(|e| e.to_string())?;
+    Ok(st.layout.as_str().to_string())
+}
+
+// --- Multi-window commands ---
+
+#[derive(Debug, Clone, Serialize)]
+pub struct WindowInfo {
+    pub id: String,
+    pub title: String,
+}
+
+#[tauri::command]
+pub fn new_window(app: AppHandle, path: Option<String>) -> Result<String, String> {
+    use tauri::WebviewUrl;
+    use tauri::WebviewWindowBuilder;
+
+    let id = format!(
+        "win-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+    );
+
+    let title = path.as_deref().unwrap_or("Lexer");
+
+    let _window = WebviewWindowBuilder::new(&app, &id, WebviewUrl::default())
+        .title(title)
+        .inner_size(960.0, 720.0)
+        .transparent(true)
+        .hidden_title(true)
+        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    // If a file path was provided, tell the new window to open it
+    if let Some(file_path) = path {
+        let handle = app.clone();
+        let window_id = id.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_millis(500));
+            let _ = handle.emit_to(&window_id, "open-file-arg", file_path);
+        });
+    }
+
+    Ok(id)
+}
+
+#[tauri::command]
+pub fn list_windows(app: AppHandle) -> Vec<WindowInfo> {
+    let windows = app.webview_windows();
+    windows
+        .iter()
+        .map(|(label, win)| {
+            let title = win.title().unwrap_or_else(|_| "Lexer".into());
+            WindowInfo {
+                id: label.clone(),
+                title,
+            }
+        })
+        .collect()
+}
+
+#[tauri::command]
+pub fn focus_window(app: AppHandle, window_id: String) -> Result<(), String> {
+    let win: tauri::WebviewWindow = app
+        .get_webview_window(&window_id)
+        .ok_or_else(|| format!("Window not found: {}", window_id))?;
+    win.set_focus().map_err(|e: tauri::Error| e.to_string())?;
+    Ok(())
 }

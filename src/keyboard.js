@@ -80,6 +80,17 @@ class KeyboardEngine {
         'bd': { fn: () => this._closeCurrentBuffer() },
         'bN': { fn: () => this._newEmptyBuffer() },
         'bo': { fn: () => window.lexerApp?.closeOtherBuffers() },
+        'wn': { fn: () => this._newWindow() },
+        'wN': { fn: () => this._newWindowSameFile() },
+        'wc': { fn: () => this._closeWindow() },
+        'ww': { fn: () => this._cycleWindow(1) },
+        'wW': { fn: () => this._cycleWindow(-1) },
+        'wl': { fn: () => this._openPalette('&') },
+        'wd': { fn: () => this._setLayout('default') },
+        'wf': { fn: () => this._setLayout('focus') },
+        'wz': { fn: () => this._setLayout('zen') },
+        'ws': { fn: () => this._setLayout('split') },
+        'wb': { fn: () => this._toggleStatusBar() },
         'r':  { fn: () => this._openPalette('>') },
         'h':  { fn: () => this._openPalette('#') },
         'c':  { fn: () => this._openPalette(':') },
@@ -117,6 +128,7 @@ class KeyboardEngine {
         keys: [
           ['f', 'file search'],
           ['b', 'buffer...'],
+          ['w', 'window/layout...'],
           ['r', 'recent files'],
           ['h', 'heading jump'],
           ['c', 'command mode'],
@@ -138,6 +150,22 @@ class KeyboardEngine {
           ['o', 'close others'],
         ],
       },
+      'space:w': {
+        title: 'w - Window / Layout',
+        keys: [
+          ['n', 'new window'],
+          ['N', 'new (same file)'],
+          ['c', 'close window'],
+          ['w', 'next window'],
+          ['W', 'prev window'],
+          ['l', 'window list'],
+          ['d', 'layout: default'],
+          ['f', 'layout: focus'],
+          ['z', 'layout: zen'],
+          ['s', 'layout: split'],
+          ['b', 'toggle status bar'],
+        ],
+      },
       view: {
         title: 'z - View',
         keys: [
@@ -157,6 +185,13 @@ class KeyboardEngine {
   handleKey(e) {
     // Ignore when palette or other overlay is open
     if (this._isOverlayActive()) return;
+
+    // Escape in zen mode: exit to default layout
+    if (e.key === 'Escape' && document.documentElement.dataset.layout === 'zen') {
+      e.preventDefault();
+      this._setLayout('default');
+      return;
+    }
 
     // Search mode has special handling
     if (this.mode === 'search') {
@@ -468,8 +503,14 @@ class KeyboardEngine {
   }
 
   _toggleToc() {
-    // Placeholder — will be implemented with layouts
-    document.body.classList.toggle('toc-visible');
+    const sidebar = document.getElementById('toc-sidebar');
+    if (sidebar) {
+      sidebar.classList.toggle('visible');
+      // Render ToC if becoming visible
+      if (sidebar.classList.contains('visible')) {
+        window.lexerLayout?.renderToc();
+      }
+    }
   }
 
   _toggleEffects() {
@@ -496,6 +537,59 @@ class KeyboardEngine {
     // Open an empty buffer — for now, just open the palette in file mode
     // A true empty buffer would need backend support for buffers without files
     this._openPalette('');
+  }
+
+  // --- Layout & Window Actions ---
+
+  _setLayout(mode) {
+    document.documentElement.dataset.layout = mode;
+    invoke('set_layout', { layout: mode }).catch(() => {});
+
+    if (mode === 'zen') {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    }
+
+    // Trigger ToC render for split layout
+    if (mode === 'split') {
+      window.lexerLayout?.renderToc();
+    }
+  }
+
+  _toggleStatusBar() {
+    const sb = document.querySelector('.status-bar');
+    if (sb) {
+      sb.style.display = sb.style.display === 'none' ? '' : 'none';
+    }
+  }
+
+  async _newWindow() {
+    try { await invoke('new_window', { path: null }); } catch (e) { console.error(e); }
+  }
+
+  async _newWindowSameFile() {
+    try {
+      const path = await invoke('get_current_file');
+      await invoke('new_window', { path });
+    } catch (e) { console.error(e); }
+  }
+
+  _closeWindow() {
+    try {
+      window.__TAURI__.window.getCurrentWindow().close();
+    } catch (_) {}
+  }
+
+  async _cycleWindow(direction) {
+    try {
+      const windows = await invoke('list_windows');
+      if (windows.length <= 1) return;
+      const current = window.__TAURI__.window.getCurrentWindow().label;
+      const idx = windows.findIndex(w => w.id === current);
+      const next = (idx + direction + windows.length) % windows.length;
+      await invoke('focus_window', { windowId: windows[next].id });
+    } catch (e) { console.error(e); }
   }
 
   _showHelp() {

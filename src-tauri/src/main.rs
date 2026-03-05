@@ -55,6 +55,11 @@ fn main() {
             commands::list_themes,
             commands::load_theme,
             commands::get_active_theme,
+            commands::set_layout,
+            commands::get_layout,
+            commands::new_window,
+            commands::list_windows,
+            commands::focus_window,
         ])
         .setup(move |app| {
             // Apply macOS vibrancy (frosted glass blur behind the window)

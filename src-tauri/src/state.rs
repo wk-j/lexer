@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 use crate::fs::FileWatcher;
@@ -15,10 +15,34 @@ pub struct BufferState {
     pub modified: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum LayoutMode {
+    #[serde(rename = "default")]
+    Default,
+    #[serde(rename = "focus")]
+    Focus,
+    #[serde(rename = "zen")]
+    Zen,
+    #[serde(rename = "split")]
+    Split,
+}
+
+impl LayoutMode {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Default => "default",
+            Self::Focus => "focus",
+            Self::Zen => "zen",
+            Self::Split => "split",
+        }
+    }
+}
+
 pub struct AppState {
     pub buffers: Vec<BufferState>,
     pub active_buffer: usize,
     pub next_buffer_id: u64,
+    pub layout: LayoutMode,
     /// File watchers keyed by canonical path. Each entry tracks which buffer IDs use it.
     pub watchers: Vec<(PathBuf, FileWatcher, Vec<u64>)>,
 }
@@ -29,6 +53,7 @@ impl AppState {
             buffers: Vec::new(),
             active_buffer: 0,
             next_buffer_id: 1,
+            layout: LayoutMode::Default,
             watchers: Vec::new(),
         }
     }

@@ -346,42 +346,53 @@
 
 ## Phase 8: Multi-Window Support
 
-### 8.1 Window Manager (`src-tauri/src/window/`)
-- [ ] `WindowManager` struct tracking all windows
-- [ ] `WindowState` per window (id, file, layout, scroll, zoom, ToC)
-- [ ] Window cascade positioning (30px offset)
+### 8.1 Window Management
+- [x] `new_window(path)` — creates new Tauri webview window with transparent/overlay config
+- [x] `list_windows` — returns all open window labels + titles
+- [x] `focus_window(window_id)` — sets focus on specified window
+- [x] Window close via `getCurrentWindow().close()` in JS
+- [ ] `WindowManager` struct for per-window state (deferred — using Tauri's built-in window tracking)
+- [ ] Window cascade positioning (deferred)
 
-### 8.2 Tauri Commands
-- [ ] `new_window` / `close_window`
-- [ ] `list_windows` / `focus_window`
+### 8.2 Keyboard (`Space w`)
+- [x] `n` new window, `N` new (same file), `c` close window
+- [x] `w`/`W` cycle focus to next/prev window
+- [x] `l` window list picker (palette `&` mode)
+- [x] `d`/`f`/`z`/`s` layout switching
+- [x] `b` toggle status bar
+- [x] Which-key labels for `Space w` sub-mode
 
-### 8.3 Window Lifecycle
-- [ ] Create -> boot frontend -> apply state -> track
-- [ ] On close: unwatch file, quit if last (macOS: keep alive)
-
-### 8.4 Shared vs Per-Window State
-- [ ] Global: theme, config, language registry, watcher pool
-- [ ] Per-window: file, scroll, layout, zoom, ToC, search
-
-### 8.5 Keyboard (`Space w`)
-- [ ] `n` (new), `N` (clone), `c` (close), `w`/`W` (cycle)
-- [ ] `l` (window list), `d`/`f`/`z`/`s` (layouts)
+### 8.3 Palette Integration
+- [x] `&` window picker palette mode
+- [x] Layout commands in `:` command palette (layout default/focus/zen/split)
+- [x] "new window" command in `:` command palette
 
 ---
 
 ## Phase 9: Focus Layouts
 
 ### 9.1 Layout CSS (`src/layout.css`)
-- [ ] Default layout (full chrome, optional ToC sidebar)
-- [ ] Focus layout (centered 700px column, no sidebar)
-- [ ] Zen layout (fullscreen, no chrome, Escape to exit)
-- [ ] Split layout (pinned ToC 280px, resizable drag handle)
+- [x] Default layout (full chrome, optional ToC sidebar via `Space s`)
+- [x] Focus layout (centered 700px column, no sidebar, no tab bar)
+- [x] Zen layout (fullscreen, no chrome, Escape to exit, mouse-near-top reveals hint)
+- [x] Split layout (pinned ToC 280px, resizable via CSS resize handle)
+- [x] `data-layout` attribute on `<html>` switches modes
+- [x] Smooth transitions on max-width/padding changes
 
 ### 9.2 Layout JS (`src/layout.js`)
-- [ ] `set_layout` / `get_layout` commands
-- [ ] Data attribute switching on root element
-- [ ] Smooth transitions between layouts
-- [ ] Zen: mouse-near-top reveals controls
+- [x] `LayoutEngine` class: ToC rendering, scroll-spy, zen controls
+- [x] `set_layout` / `get_layout` Tauri commands (persists in AppState)
+- [x] `_setLayout(mode)` in keyboard.js: sets data attribute, calls backend, handles fullscreen
+- [x] Zen: mouse-near-top reveals controls bar with exit hint
+- [x] Escape exits zen mode back to default layout
+- [x] ToC scroll-spy: highlights active heading as user scrolls
+
+### 9.3 ToC Sidebar
+- [x] HTML sidebar element in content-wrapper (flex layout with content panel)
+- [x] ToC items with indentation by heading level, active highlight
+- [x] Click to smooth-scroll to heading
+- [x] Auto-re-renders on content change (MutationObserver)
+- [x] Frosted glass background with backdrop-filter
 
 ---
 
@@ -432,4 +443,5 @@
 | `4b879e3` | Improve scroll: custom eased animation for j/k navigation |
 | `db224ef` | Phase 6: Buffer/tab support + transparent vibrancy window |
 | `d5dcc7a` | Fix search navigation: remove undefined method call, add match counter |
-| | Phase 7: Custom theme system (pending commit) |
+| `5f83239` | Phase 7: Custom TOML theme system with 5 built-in themes |
+| | Phase 8+9: Multi-window support + focus layouts (pending commit) |

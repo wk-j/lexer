@@ -37,6 +37,7 @@ class CommandPalette {
       '>': 'recent',
       '/': 'search',
       '%': 'buffer',
+      '&': 'window',
     };
     this.mode = modeMap[prefix] || 'file';
 
@@ -49,6 +50,7 @@ class CommandPalette {
       theme: 'Pick a theme...',
       recent: 'Recent files...',
       buffer: 'Switch to buffer...',
+      window: 'Switch to window...',
     };
     this.input.placeholder = placeholders[this.mode] || 'Search...';
     this.input.focus();
@@ -149,6 +151,9 @@ class CommandPalette {
       case 'buffer':
         await this._loadBuffers();
         break;
+      case 'window':
+        await this._loadWindows();
+        break;
       default:
         this.items = [];
     }
@@ -197,6 +202,11 @@ class CommandPalette {
       { label: 'reload', detail: 'Force re-render current file', value: 'reload', type: 'command' },
       { label: 'copy path', detail: 'Copy file path to clipboard', value: 'copy-path', type: 'command' },
       { label: 'theme', detail: 'Open theme picker', value: 'theme-picker', type: 'command' },
+      { label: 'layout default', detail: 'Switch to default layout', value: 'layout-default', type: 'command' },
+      { label: 'layout focus', detail: 'Centered reading column', value: 'layout-focus', type: 'command' },
+      { label: 'layout zen', detail: 'Fullscreen, no chrome', value: 'layout-zen', type: 'command' },
+      { label: 'layout split', detail: 'Side-by-side with ToC', value: 'layout-split', type: 'command' },
+      { label: 'new window', detail: 'Open a new empty window', value: 'new-window', type: 'command' },
     ];
   }
 
@@ -254,13 +264,28 @@ class CommandPalette {
     }
   }
 
+  async _loadWindows() {
+    try {
+      const windows = await invoke('list_windows');
+      this.items = windows.map(w => ({
+        label: w.title,
+        detail: w.id,
+        value: w.id,
+        type: 'window',
+      }));
+    } catch (err) {
+      console.error('list_windows failed:', err);
+      this.items = [];
+    }
+  }
+
   // --- Filtering ---
 
   _onInput() {
     const raw = this.input.value;
 
     // Check if prefix changed mode
-    const prefixMap = { ':': 'command', '#': 'heading', '@': 'theme', '>': 'recent', '%': 'buffer' };
+    const prefixMap = { ':': 'command', '#': 'heading', '@': 'theme', '>': 'recent', '%': 'buffer', '&': 'window' };
     const firstChar = raw[0];
     if (prefixMap[firstChar] && this.mode !== prefixMap[firstChar]) {
       this.mode = prefixMap[firstChar];
@@ -279,7 +304,7 @@ class CommandPalette {
   _filter() {
     const raw = this.input.value;
     // Strip mode prefix for query
-    const prefixes = [':', '#', '@', '>', '%'];
+    const prefixes = [':', '#', '@', '>', '%', '&'];
     const query = prefixes.includes(raw[0]) ? raw.slice(1).trim() : raw.trim();
 
     if (!query) {
@@ -299,7 +324,7 @@ class CommandPalette {
 
   _render() {
     const raw = this.input.value;
-    const prefixes = [':', '#', '@', '>', '%'];
+    const prefixes = [':', '#', '@', '>', '%', '&'];
     const query = prefixes.includes(raw[0]) ? raw.slice(1).trim() : raw.trim();
 
     let html = '';
@@ -356,6 +381,7 @@ class CommandPalette {
       theme: 'Type to filter themes  ·  Enter to apply',
       recent: 'Recently opened files  ·  Enter to open',
       buffer: 'Type to filter buffers  ·  Enter to switch',
+      window: 'Type to filter windows  ·  Enter to focus',
     };
     this.hintEl.textContent = hints[this.mode] || '';
   }
@@ -396,6 +422,10 @@ class CommandPalette {
           window.lexerApp.switchBuffer(item.value);
         }
         break;
+
+      case 'window':
+        invoke('focus_window', { windowId: item.value }).catch(console.error);
+        break;
     }
   }
 
@@ -434,8 +464,16 @@ class CommandPalette {
         });
         break;
       case 'theme-picker':
-        // Re-open palette in theme mode
         setTimeout(() => this.open('@'), 50);
+        break;
+      case 'layout-default':
+      case 'layout-focus':
+      case 'layout-zen':
+      case 'layout-split':
+        if (kb) kb._setLayout(cmd.replace('layout-', ''));
+        break;
+      case 'new-window':
+        invoke('new_window', { path: null }).catch(console.error);
         break;
     }
   }

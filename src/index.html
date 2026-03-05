@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" data-mode="normal">
+<html lang="en" data-mode="normal" data-layout="default">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lexer</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="effects.css">
+  <link rel="stylesheet" href="layout.css">
 </head>
 <body>
   <!-- Background layers (z-index 0-1) -->
@@ -18,11 +19,14 @@
   <div class="app">
     <div class="titlebar-drag" id="titlebar-drag" data-tauri-drag-region></div>
     <div class="tab-bar" id="tab-bar"></div>
-    <div class="content-panel" id="content">
-      <div class="empty-state">
-        <h1>Lexer</h1>
-        <p>Open a Markdown file to get started.</p>
-        <p class="hint">Drag &amp; drop a <code>.md</code> file, or press <kbd>Cmd+O</kbd></p>
+    <div class="content-wrapper">
+      <div class="toc-sidebar" id="toc-sidebar"></div>
+      <div class="content-panel" id="content">
+        <div class="empty-state">
+          <h1>Lexer</h1>
+          <p>Open a Markdown file to get started.</p>
+          <p class="hint">Drag &amp; drop a <code>.md</code> file, or press <kbd>Cmd+O</kbd></p>
+        </div>
       </div>
     </div>
     <div class="search-bar" id="search-bar">
@@ -38,6 +42,11 @@
         <span id="pending-keys"></span>
       </div>
     </div>
+  </div>
+
+  <!-- Zen mode controls (revealed on mouse near top) -->
+  <div class="zen-controls" id="zen-controls">
+    <span class="zen-controls-hint">Zen Mode &middot; Press <kbd>Escape</kbd> to exit</span>
   </div>
 
   <!-- Which-Key popup -->
@@ -58,6 +67,7 @@
   <script src="app.js"></script>
   <script src="keyboard.js"></script>
   <script src="palette.js"></script>
+  <script src="layout.js"></script>
   <script src="effects.js"></script>
   <script src="particles.js"></script>
 </body>
