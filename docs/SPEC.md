@@ -21,3 +21,9 @@
 | 13 | [Dependencies](13-dependencies.md) | Cargo.toml, Tauri config |
 | 14 | [Build & Run](14-build.md) | Dev/release commands, platform support |
 | 15 | [Future Enhancements](15-future.md) | Roadmap items not yet in scope |
+
+## Implementation Tracking
+
+| Document | Description |
+|----------|-------------|
+| [PROGRESS.md](PROGRESS.md) | Checklist of all features by phase, updated as implementation proceeds |
