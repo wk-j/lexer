@@ -1,7 +1,9 @@
 // Lexer - Frontend Application
+
+// In Tauri v2 without npm, core APIs are on window.__TAURI__
+// but plugin APIs must be called via invoke with plugin:name|command
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
-const { open } = window.__TAURI__.dialog;
 
 const contentEl = document.getElementById('content');
 const statusFileEl = document.getElementById('status-file');
@@ -22,12 +24,20 @@ async function openFile(path) {
 }
 
 async function openFileDialog() {
-  const selected = await open({
-    multiple: false,
-    filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'mkd', 'mdx'] }],
-  });
-  if (selected) {
-    await openFile(selected);
+  try {
+    // Tauri v2 plugin command for file open dialog
+    const selected = await invoke('plugin:dialog|open', {
+      options: {
+        multiple: false,
+        filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'mkd', 'mdx'] }],
+      },
+    });
+    if (selected) {
+      // selected is a path string (or null if cancelled)
+      await openFile(selected);
+    }
+  } catch (err) {
+    console.error('Failed to open dialog:', err);
   }
 }
 
@@ -55,7 +65,6 @@ document.addEventListener('drop', (e) => {
   if (files && files.length > 0) {
     const file = files[0];
     if (file.name.match(/\.(md|markdown|mkd|mdx)$/i)) {
-      // Tauri file drop gives us the path
       openFile(file.path || file.name);
     }
   }
@@ -73,7 +82,6 @@ listen('file-changed', (event) => {
   const scrollPos = contentEl.scrollTop;
   contentEl.innerHTML = event.payload.html;
   statusFileEl.textContent = event.payload.title;
-  // Preserve scroll position
   requestAnimationFrame(() => {
     contentEl.scrollTop = scrollPos;
   });
@@ -91,7 +99,7 @@ contentEl.addEventListener('click', (e) => {
   // External links: open in default browser
   if (href.startsWith('http://') || href.startsWith('https://')) {
     e.preventDefault();
-    window.__TAURI__.shell.open(href);
+    invoke('plugin:shell|open', { path: href }).catch(console.error);
     return;
   }
 
@@ -108,7 +116,6 @@ contentEl.addEventListener('click', (e) => {
   // Relative .md links: open in Lexer
   if (href.match(/\.(md|markdown)$/i)) {
     e.preventDefault();
-    // Resolve relative to current file
     invoke('get_current_file').then((currentFile) => {
       if (currentFile) {
         const dir = currentFile.substring(0, currentFile.lastIndexOf('/'));
