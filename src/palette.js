@@ -14,6 +14,7 @@ class CommandPalette {
     this.items = [];            // current candidate list
     this.filtered = [];         // after fuzzy filtering
     this.selectedIndex = 0;
+    this._renderingFromKeyboard = false; // suppress mouseenter during keyboard-driven renders
 
     // Cache
     this._fileCache = null;
@@ -55,10 +56,14 @@ class CommandPalette {
     this.input.placeholder = placeholders[this.mode] || 'Search...';
     this.input.focus();
 
-    // Load candidates
+    // Load candidates — re-focus input after async load in case focus was lost
     this._loadCandidates().then(() => {
       this._filter();
       this._render();
+      // Re-assert focus after async load completes
+      if (this.visible) {
+        this.input.focus();
+      }
     });
 
     this._updateHint();
@@ -68,6 +73,7 @@ class CommandPalette {
     this.visible = false;
     this.overlay.classList.remove('visible');
     this.input.value = '';
+    this.input.blur();
     this.items = [];
     this.filtered = [];
   }
@@ -75,8 +81,19 @@ class CommandPalette {
   // --- Event Binding ---
 
   _bindEvents() {
-    // Keyboard inside palette
+    // Keyboard inside palette — stop propagation to prevent keyboard engine interference
     this.input.addEventListener('keydown', (e) => {
+      // Only intercept when palette is actually visible
+      if (!this.visible) return;
+      // Stop keydown events from bubbling to the keyboard engine
+      e.stopPropagation();
+
+      // Cmd+P toggles palette (must handle here since stopPropagation blocks document handler)
+      if (e.metaKey && !e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        this.close();
+        return;
+      }
       if (e.key === 'Escape') {
         e.preventDefault();
         this.close();
@@ -116,15 +133,49 @@ class CommandPalette {
       this.open(e.detail.prefix);
     });
 
-    // Cmd+P opens file palette (macOS: metaKey only, no ctrlKey to avoid conflict with Ctrl+P navigation)
+    // Capture-phase handler: intercept ALL keydown events when palette is visible
+    // This ensures palette navigation works regardless of which element has focus
     document.addEventListener('keydown', (e) => {
+      if (!this.visible) return;
+
+      // Cmd+P toggles palette
       if (e.metaKey && !e.ctrlKey && e.key === 'p') {
         e.preventDefault();
-        if (this.visible) {
-          this.close();
-        } else {
-          this.open('');
-        }
+        e.stopPropagation();
+        this.close();
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        this.close();
+        return;
+      }
+      if (e.key === 'ArrowDown' || (e.ctrlKey && e.key === 'n')) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._select(this.selectedIndex + 1);
+        return;
+      }
+      if (e.key === 'ArrowUp' || (e.ctrlKey && e.key === 'p')) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._select(this.selectedIndex - 1);
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        this._execute();
+        return;
+      }
+    }, true); // <-- capture phase: fires before target and bubble handlers
+
+    // Cmd+P opens file palette when palette is NOT visible
+    document.addEventListener('keydown', (e) => {
+      if (e.metaKey && !e.ctrlKey && e.key === 'p' && !this.visible) {
+        e.preventDefault();
+        this.open('');
       }
     });
   }
@@ -350,6 +401,8 @@ class CommandPalette {
         this._execute();
       });
       el.addEventListener('mouseenter', () => {
+        // Skip if this was triggered by a keyboard-driven DOM rebuild
+        if (this._renderingFromKeyboard) return;
         this.selectedIndex = parseInt(el.dataset.index, 10);
         this._render();
       });
@@ -369,7 +422,10 @@ class CommandPalette {
   _select(index) {
     if (this.filtered.length === 0) return;
     this.selectedIndex = ((index % this.filtered.length) + this.filtered.length) % this.filtered.length;
+    this._renderingFromKeyboard = true;
     this._render();
+    // Allow mouseenter again after the DOM has settled
+    requestAnimationFrame(() => { this._renderingFromKeyboard = false; });
   }
 
   _updateHint() {

@@ -102,7 +102,7 @@
 ## Phase 3: Helix-Style Keyboard Navigation
 
 ### 3.1 Keyboard Engine (`src/keyboard.js`)
-- [x] Mode state machine (Normal, Goto, Space, Search, View)
+- [x] Mode state machine (Normal, Goto, Space, Search, View, Hint)
 - [x] Pending key buffer with 1s timeout
 - [x] Key normalization (Shift, Space, arrows, etc.)
 - [x] Overlay detection (skip when palette/lightbox open)
@@ -120,7 +120,17 @@
 ### 3.3 Goto Mode (`g`)
 - [x] `gg` (top), `ge` (end), `gh` (first heading), `gl` (last heading)
 - [x] `gt` (ToC sidebar toggle)
+- [x] `gw` (link hints — Vimium-style jump to visible links/elements)
 - [ ] `gn`/`gp` (next/prev file) — needs file list
+
+### 3.3a Hint Mode (`g w`)
+- [x] Scan visible links, buttons, checkboxes, summary elements in viewport
+- [x] Overlay letter labels using home-row keys (a s d f g h j k l)
+- [x] Single-char labels for ≤9 targets, two-char for >9 (max 81)
+- [x] Type to narrow, exact match activates element (click)
+- [x] Backspace to undo, Escape to cancel
+- [x] Dimmed already-typed prefix in label, outline on active targets
+- [x] Status bar shows HNT mode badge (red)
 
 ### 3.4 Space Mode (leader key)
 - [x] `f` (file search), `r` (recent), `h` (heading jump), `c` (commands)
@@ -156,9 +166,9 @@
 - [x] Auto-focus input, scrollable results list
 - [x] Highlighted fuzzy-match characters
 - [x] Result count, footer hint bar with contextual hints
-- [x] Keyboard navigation (up/down/enter/escape)
+- [x] Keyboard navigation (up/down/enter/escape) — capture-phase handler for reliable interception
 - [x] Mouse hover/click support
-- [x] `Cmd+P` / `Ctrl+P` toggle
+- [x] `Cmd+P` toggle (not Ctrl+P — conflicts with Ctrl+P list navigation)
 
 ### 4.2 Fuzzy Matching
 - [x] Scoring algorithm (consecutive match bonus, path boundary bonus)
@@ -444,4 +454,5 @@
 | `db224ef` | Phase 6: Buffer/tab support + transparent vibrancy window |
 | `d5dcc7a` | Fix search navigation: remove undefined method call, add match counter |
 | `5f83239` | Phase 7: Custom TOML theme system with 5 built-in themes |
-| | Phase 8+9: Multi-window support + focus layouts (pending commit) |
+| `02fd293` | Phase 8+9: Multi-window support + focus layouts |
+| | Fix palette navigation: capture-phase keydown handler |

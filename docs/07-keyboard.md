@@ -11,6 +11,7 @@ Lexer implements a full modal keyboard navigation system inspired by the [Helix 
 | **Space**  | `SPC`       | Leader-key menu for commands and palette modes   | `Space` in Normal | After action or `Escape` |
 | **Search** | `/ ...`     | Text search within rendered content              | `/` in Normal     | `Escape` or `Enter` |
 | **View**   | `VIW`       | Viewport adjustments (center, top, zoom)         | `z` in Normal     | After action or `Escape` |
+| **Hint**   | `HNT`       | Vimium-style link jump with letter labels        | `g w` in Normal   | After jump or `Escape` |
 
 The current mode is displayed in the status bar. Unrecognized keys in any mode are ignored (no accidental actions).
 
@@ -70,6 +71,7 @@ Entered by pressing `g` in Normal mode. The which-key popup shows available targ
 | `h`   | Go to first heading                    |
 | `l`   | Go to last heading                     |
 | `t`   | Go to table of contents sidebar        |
+| `w`   | **Link hints** — Vimium-style jump     |
 | `n`   | Go to next file (if directory scanned) |
 | `p`   | Go to previous file                    |
 
@@ -132,6 +134,76 @@ Entered by pressing `z` in Normal mode. Adjusts viewport without changing docume
 | `-`   | Zoom out (decrease font size)                |
 | `=`   | Reset zoom to default                        |
 
+## Hint Mode (`g w`) — Vimium-Style Link Jump
+
+Entered by pressing `g w` in Normal mode (via Goto). Overlays letter labels on every visible link and interactive element in the content area. Type the label character(s) to instantly activate that element.
+
+**How it works:**
+
+1. Press `g w` — all visible links, buttons, checkboxes, and `<summary>` elements get a letter label overlay
+2. Type the hint character(s) (from home row: `a s d f g h j k l`) to narrow down
+3. When a unique match is found, the element is activated (link clicked, checkbox toggled, etc.)
+4. Press `Escape` or `Backspace` (when empty) to cancel
+
+| Key         | Action                                      |
+| ----------- | ------------------------------------------- |
+| *(letter)*  | Type hint characters to narrow and activate  |
+| `Backspace` | Remove last typed hint character             |
+| `Escape`    | Cancel hint mode, remove labels              |
+
+**Label generation:**
+- Uses home-row keys: `a s d f g h j k l` for fast touch-typing
+- If ≤ 9 visible targets: single-character labels (`a`, `s`, `d`, ...)
+- If > 9 visible targets: two-character labels (`aa`, `as`, `ad`, ...)
+- Maximum: 81 targets (9×9); excess elements are unlabeled
+
+**Targetable elements:**
+- `<a>` links (internal anchors, relative `.md` links, external URLs)
+- `<button>` and `[role="button"]` elements (copy buttons, etc.)
+- `<summary>` elements (collapsible details)
+- `<input type="checkbox">` (task list items)
+
+**Visual design:**
+- Labels appear as small colored badges positioned to the left of each target
+- Current accent color background with high-contrast text
+- Already-typed characters are dimmed; remaining characters are bright
+- Target elements get a subtle outline highlight while hints are active
+
+```css
+.hint-label {
+    position: absolute;
+    background: var(--accent);
+    color: var(--bg-base-opaque);
+    font-family: var(--font-family-mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    text-transform: uppercase;
+}
+.hint-label .hint-matched {
+    opacity: 0.4;
+}
+.hint-active {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+```
+
+```
+Example: pressing g w with 5 visible links
+
+  a  Introduction           ← link to #intro
+  s  Getting Started        ← link to #getting-started
+  d  GitHub Repository      ← external link
+  f  API Reference          ← relative .md link
+  g  ☐ Enable dark mode    ← task list checkbox
+
+Type "d" → opens GitHub Repository link
+Type "Escape" → cancel
+```
+
 ## Search Mode (`/`)
 
 Entered by pressing `/` in Normal mode or `Space /` in Space mode. A search input appears in the status bar area (not the command palette).
@@ -170,6 +242,7 @@ When the user enters a multi-key mode (Goto, Space, View), a floating popup appe
 |  h  first heading                  |
 |  l  last heading                   |
 |  t  table of contents              |
+|  w  link hints (jump)              |
 |  n  next file                      |
 |  p  previous file                  |
 +------------------------------------+
@@ -243,6 +316,7 @@ The status bar displays the current mode with a colored badge. It also shows pen
 .mode-space   { background: #c678dd; color: #1e2127; }
 .mode-search  { background: #98c379; color: #1e2127; }
 .mode-view    { background: #56b6c2; color: #1e2127; }
+.mode-hint    { background: #e06c75; color: #1e2127; }
 ```
 
 ## Keyboard Engine (JS)
@@ -255,9 +329,10 @@ class KeyboardEngine {
         this.timeout = null;       // clear pending after 1s
         this.keymaps = {
             normal: { /* key -> action or mode-switch */ },
-            goto:   { /* ... */ },
+            goto:   { /* ... gw enters hint mode */ },
             space:  { /* ... */ },
             view:   { /* ... */ },
+            // hint mode is handled separately (not keymap-driven)
         };
     }
 

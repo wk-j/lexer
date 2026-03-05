@@ -70,6 +70,7 @@ class KeyboardEngine {
         'h':  { fn: () => this._jumpToFirstHeading() },
         'l':  { fn: () => this._jumpToLastHeading() },
         't':  { fn: () => this._toggleToc() },
+        'w':  { fn: () => this._enterHintMode() },
       },
 
       space: {
@@ -121,6 +122,7 @@ class KeyboardEngine {
           ['h', 'first heading'],
           ['l', 'last heading'],
           ['t', 'table of contents'],
+          ['w', 'link hints (jump)'],
         ],
       },
       space: {
@@ -199,6 +201,12 @@ class KeyboardEngine {
       return;
     }
 
+    // Hint mode has special handling (Vimium-style link jump)
+    if (this.mode === 'hint') {
+      this._handleHintKey(e);
+      return;
+    }
+
     // Ignore keys with Ctrl/Cmd (let browser/Tauri handle those)
     if (e.ctrlKey || e.metaKey) return;
 
@@ -215,7 +223,11 @@ class KeyboardEngine {
       this._execute(map[seq]);
       this.pending = '';
       this._clearTimeout();
-      this._hideWhichKey();
+      // Only hide which-key if the action was NOT a mode switch
+      // (mode switches show their own which-key via setMode)
+      if (!map[seq].mode) {
+        this._hideWhichKey();
+      }
       return;
     }
 
@@ -250,7 +262,7 @@ class KeyboardEngine {
     } else if (action.fn) {
       action.fn();
       // Return to normal after action in sub-modes
-      if (this.mode !== 'normal' && this.mode !== 'search') {
+      if (this.mode !== 'normal' && this.mode !== 'search' && this.mode !== 'hint') {
         this.setMode('normal');
       }
     }
@@ -304,7 +316,7 @@ class KeyboardEngine {
 
   _updateModeBadge() {
     if (!this.modeBadge) return;
-    const labels = { normal: 'NOR', goto: 'GOT', space: 'SPC', search: 'SCH', view: 'VIW' };
+    const labels = { normal: 'NOR', goto: 'GOT', space: 'SPC', search: 'SCH', view: 'VIW', hint: 'HNT' };
     this.modeBadge.textContent = labels[this.mode] || this.mode.toUpperCase();
     this.modeBadge.className = `mode-badge mode-${this.mode}`;
   }
@@ -812,6 +824,180 @@ class KeyboardEngine {
     this.searchMatches = [];
     this.searchIndex = -1;
     if (this.pendingEl) this.pendingEl.textContent = '';
+  }
+
+  // --- Link Hint Mode (Vimium-style gw) ---
+
+  _enterHintMode() {
+    // Collect all visible clickable elements in the content area
+    const contentRect = this.contentEl.getBoundingClientRect();
+    const scrollTop = this.contentEl.scrollTop;
+    const viewTop = scrollTop;
+    const viewBottom = scrollTop + this.contentEl.clientHeight;
+
+    const selectors = 'a[href], button, [role="button"], summary, input[type="checkbox"]';
+    const allElements = Array.from(this.contentEl.querySelectorAll(selectors));
+
+    // Filter to only visible elements within the scroll viewport
+    const visibleElements = allElements.filter(el => {
+      const top = el.offsetTop;
+      const bottom = top + el.offsetHeight;
+      // Element must overlap with the visible viewport
+      return bottom > viewTop && top < viewBottom && el.offsetWidth > 0 && el.offsetHeight > 0;
+    });
+
+    if (visibleElements.length === 0) return;
+
+    // Generate hint labels (a, s, d, f, j, k, l, then aa, as, ad, ...)
+    const labels = this._generateHintLabels(visibleElements.length);
+
+    // Store hint state
+    this._hints = [];
+    this._hintInput = '';
+    this._hintContainer = document.createElement('div');
+    this._hintContainer.className = 'hint-container';
+    this._hintContainer.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:850;';
+    this.contentEl.appendChild(this._hintContainer);
+
+    for (let i = 0; i < visibleElements.length; i++) {
+      const el = visibleElements[i];
+      const label = labels[i];
+
+      // Position the hint label near the element
+      const hint = document.createElement('span');
+      hint.className = 'hint-label';
+      hint.textContent = label;
+      hint.style.top = `${el.offsetTop}px`;
+      hint.style.left = `${Math.max(0, el.offsetLeft - 20)}px`;
+
+      this._hintContainer.appendChild(hint);
+      el.classList.add('hint-active');
+
+      this._hints.push({ el, label, hintEl: hint });
+    }
+
+    // Enter hint mode
+    this.mode = 'hint';
+    this._updateModeBadge();
+    if (this.pendingEl) this.pendingEl.textContent = '';
+  }
+
+  _handleHintKey(e) {
+    e.preventDefault();
+
+    if (e.key === 'Escape') {
+      this._exitHintMode();
+      return;
+    }
+
+    // Backspace removes last typed character
+    if (e.key === 'Backspace') {
+      if (this._hintInput.length > 0) {
+        this._hintInput = this._hintInput.slice(0, -1);
+        this._updateHintDisplay();
+      } else {
+        this._exitHintMode();
+      }
+      return;
+    }
+
+    // Ignore modifier keys alone
+    if (e.key.length > 1) return;
+
+    // Append typed character
+    this._hintInput += e.key.toLowerCase();
+    if (this.pendingEl) this.pendingEl.textContent = this._hintInput;
+
+    // Filter hints
+    const matching = this._hints.filter(h => h.label.startsWith(this._hintInput));
+
+    if (matching.length === 0) {
+      // No match — exit
+      this._exitHintMode();
+      return;
+    }
+
+    if (matching.length === 1 && matching[0].label === this._hintInput) {
+      // Exact match — activate the element
+      const target = matching[0].el;
+      this._exitHintMode();
+      this._activateHintTarget(target);
+      return;
+    }
+
+    // Partial match — update display to show remaining hints
+    this._updateHintDisplay();
+  }
+
+  _updateHintDisplay() {
+    for (const hint of this._hints) {
+      if (hint.label.startsWith(this._hintInput)) {
+        hint.hintEl.style.display = '';
+        hint.el.classList.add('hint-active');
+        // Dim the already-typed prefix
+        const matched = hint.label.slice(0, this._hintInput.length);
+        const remaining = hint.label.slice(this._hintInput.length);
+        hint.hintEl.innerHTML = `<span class="hint-matched">${this._escapeHtml(matched)}</span>${this._escapeHtml(remaining)}`;
+      } else {
+        hint.hintEl.style.display = 'none';
+        hint.el.classList.remove('hint-active');
+      }
+    }
+    if (this.pendingEl) this.pendingEl.textContent = this._hintInput;
+  }
+
+  _activateHintTarget(el) {
+    if (el.tagName === 'A') {
+      el.click();
+    } else if (el.tagName === 'BUTTON' || el.getAttribute('role') === 'button') {
+      el.click();
+    } else if (el.tagName === 'SUMMARY') {
+      el.click();
+    } else if (el.tagName === 'INPUT' && el.type === 'checkbox') {
+      el.click();
+    } else {
+      el.click();
+    }
+    // Briefly highlight the activated element
+    el.classList.add('hint-active');
+    setTimeout(() => el.classList.remove('hint-active'), 300);
+  }
+
+  _exitHintMode() {
+    // Remove all hint labels and active outlines
+    if (this._hintContainer) {
+      this._hintContainer.remove();
+      this._hintContainer = null;
+    }
+    if (this._hints) {
+      for (const hint of this._hints) {
+        hint.el.classList.remove('hint-active');
+      }
+      this._hints = null;
+    }
+    this._hintInput = '';
+    this.setMode('normal');
+  }
+
+  _generateHintLabels(count) {
+    // Use home-row keys for fast typing
+    const chars = 'asdfghjkl';
+    const labels = [];
+
+    if (count <= chars.length) {
+      // Single character labels
+      for (let i = 0; i < count; i++) {
+        labels.push(chars[i]);
+      }
+    } else {
+      // Two character labels
+      for (let i = 0; i < chars.length && labels.length < count; i++) {
+        for (let j = 0; j < chars.length && labels.length < count; j++) {
+          labels.push(chars[i] + chars[j]);
+        }
+      }
+    }
+    return labels;
   }
 
   // --- Helpers ---
