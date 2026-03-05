@@ -42,24 +42,26 @@
 ### 1.4 File System (`src-tauri/src/fs/`)
 - [x] `load_file()` — read file, resolve to canonical path
 - [x] `resolve_path()` — relative/absolute path resolution
-- [x] `FileWatcher` struct with `notify` crate
-- [ ] File watcher integration in `main.rs` (spawn thread, emit `file-changed` events)
-- [ ] Re-render on file change in frontend
+- [x] `FileWatcher` struct with `notify` crate + 300ms debounce
+- [x] File watcher integration in `commands::open_file` (auto-starts watcher, emits `file-changed`)
+- [x] Re-render on file change in frontend (scroll position preserved)
 
 ### 1.5 Tauri Commands (`src-tauri/src/commands.rs`)
-- [x] `open_file` — parse + render + return HTML/title/TOC
+- [x] `open_file` — parse + render + return HTML/title/TOC + start watcher
 - [x] `get_toc` — return TOC for current file
 - [x] `get_current_file` — return current file path
-- [ ] `open_file_dialog` (currently handled via `plugin:dialog|open` in JS)
+- [x] `scan_directory` — recursive `.md` file listing with metadata
+- [x] File dialog handled via `plugin:dialog|open` in JS
 
 ### 1.6 App State (`src-tauri/src/state.rs`)
-- [x] `AppState` with `current_file: Option<PathBuf>`
+- [x] `AppState` with `current_file: Option<PathBuf>`, `watcher: Option<FileWatcher>`
 - [ ] Recent files list (LRU)
 - [ ] Per-window state
 
 ### 1.7 Frontend — HTML (`src/index.html`)
 - [x] HTML shell with content panel, status bar, empty state
-- [x] Script and stylesheet links
+- [x] Script and stylesheet links (app.js, keyboard.js, palette.js)
+- [x] Mode badge, pending keys, search bar, which-key popup, palette overlay
 
 ### 1.8 Frontend — Styling (`src/style.css`)
 - [x] CSS custom properties for full dark theme
@@ -89,81 +91,92 @@
 
 ## Phase 2: File Watching & Live Reload
 
-- [ ] Wire `FileWatcher` into `main.rs` setup
-- [ ] Spawn watcher thread, emit `file-changed` event with re-rendered HTML
-- [ ] Swap watcher when user opens a different file
-- [ ] Frontend: verify scroll position preservation on reload
-- [ ] Handle watcher errors gracefully
+- [x] Wire `FileWatcher` into `commands::open_file`
+- [x] Debounced watcher (300ms) emits `file-changed` event with re-rendered HTML
+- [x] Watcher swaps when user opens a different file (old watcher dropped)
+- [x] Frontend preserves scroll position on reload
+- [x] Watcher errors handled gracefully (logged, watcher set to None)
 
 ---
 
 ## Phase 3: Helix-Style Keyboard Navigation
 
 ### 3.1 Keyboard Engine (`src/keyboard.js`)
-- [ ] Mode state machine (Normal, Goto, Space, Search, View)
-- [ ] Pending key buffer with 1s timeout
-- [ ] Key normalization
-- [ ] Overlay detection (skip when palette/lightbox open)
+- [x] Mode state machine (Normal, Goto, Space, Search, View)
+- [x] Pending key buffer with 1s timeout
+- [x] Key normalization (Shift, Space, arrows, etc.)
+- [x] Overlay detection (skip when palette/lightbox open)
+- [x] Ctrl/Cmd keys ignored (passed through to browser/Tauri)
 
 ### 3.2 Normal Mode
-- [ ] Scroll: `j`/`k` (line), `d`/`u` (half page), `f`/`b` (full page)
-- [ ] Jump: `G` (bottom), `gg` (top)
-- [ ] Heading nav: `]`/`[` (next/prev), `]]`/`[[` (next/prev h2+), `1`-`6` (level)
-- [ ] Link nav: `Tab`/`S-Tab` (focus), `Enter` (open)
-- [ ] Actions: `y` (copy anchor), `p` (open from clipboard), `r` (reload), `q` (quit), `?` (help)
+- [x] Scroll: `j`/`k` (line), `d`/`u` (half page), `f`/`b` (full page)
+- [x] Jump: `G` (bottom), `gg` (top via Goto mode)
+- [x] Heading nav: `]`/`[` (next/prev), `]]`/`[[` (next/prev h2+), `1`-`6` (level)
+- [x] Link nav: `Tab`/`S-Tab` (focus with visual highlight), `Enter` (open)
+- [x] Actions: `y` (copy anchor), `r` (reload), `n`/`N` (search next/prev), `?` (help overlay)
+- [ ] `p` (open from clipboard) — not yet implemented
+- [ ] `q` (quit) — not yet implemented
 
 ### 3.3 Goto Mode (`g`)
-- [ ] `gg` (top), `ge` (end), `gh` (first heading), `gl` (last heading)
-- [ ] `gt` (ToC sidebar), `gn`/`gp` (next/prev file)
+- [x] `gg` (top), `ge` (end), `gh` (first heading), `gl` (last heading)
+- [x] `gt` (ToC sidebar toggle)
+- [ ] `gn`/`gp` (next/prev file) — needs file list
 
 ### 3.4 Space Mode (leader key)
-- [ ] `f` (file search), `r` (recent), `h` (heading jump), `c` (commands)
-- [ ] `t` (themes), `/` (text search), `s` (sidebar), `e` (effects)
-- [ ] `l` (line numbers), `p` (print), `q` (quit), `?` (help)
+- [x] `f` (file search), `r` (recent), `h` (heading jump), `c` (commands)
+- [x] `t` (themes), `/` (text search), `s` (sidebar), `e` (effects)
+- [x] `l` (line numbers)
+- [ ] `p` (print), `q` (quit), `?` (help) — not yet wired
 
 ### 3.5 View Mode (`z`)
-- [ ] `zz` (center), `zt` (top), `zb` (bottom)
-- [ ] `z+`/`z-` (zoom), `z=` (reset zoom)
+- [x] `zz` (center viewport)
+- [x] `zt` (top), `zb` (bottom)
+- [x] `z+`/`z-` (zoom in/out), `z=` (reset zoom)
 
 ### 3.6 Search Mode (`/`)
-- [ ] Incremental highlight
-- [ ] `Enter` (confirm + jump), `n`/`N` (next/prev), `Escape` (cancel)
+- [x] Incremental highlight (text node walking, `<mark>` wrapping)
+- [x] `Enter` (confirm + jump to first), `n`/`N` (next/prev), `Escape` (cancel + clear)
+- [x] Search bar UI with `/` label
 
 ### 3.7 Which-Key Popup
-- [ ] Floating popup after 200ms in multi-key modes
-- [ ] Shows available keys + descriptions
+- [x] Floating popup on mode entry (Goto, Space, View)
+- [x] Shows available keys + descriptions
+- [x] Styled with panel bg, accent colors, monospace
 
 ### 3.8 Status Bar Mode Indicator
-- [ ] Colored badge showing current mode
-- [ ] Pending key sequence display
+- [x] Colored badge (NOR/GOT/SPC/SCH/VIW) with per-mode colors
+- [x] Pending key sequence display
 
 ---
 
 ## Phase 4: Command Palette
 
 ### 4.1 Palette UI (`src/palette.js`)
-- [ ] Modal overlay with frosted glass backdrop
-- [ ] Auto-focus input, scrollable results list
-- [ ] Highlighted fuzzy-match characters
-- [ ] Result count, footer hint bar
-- [ ] Keyboard navigation (up/down/enter/escape)
+- [x] Modal overlay with semi-transparent backdrop
+- [x] Auto-focus input, scrollable results list
+- [x] Highlighted fuzzy-match characters
+- [x] Result count, footer hint bar with contextual hints
+- [x] Keyboard navigation (up/down/enter/escape)
+- [x] Mouse hover/click support
+- [x] `Cmd+P` / `Ctrl+P` toggle
 
 ### 4.2 Fuzzy Matching
-- [ ] Scoring algorithm (consecutive match bonus, path boundary bonus)
+- [x] Scoring algorithm (consecutive match bonus, path boundary bonus)
+- [x] Match character highlighting in results
 
 ### 4.3 Palette Modes
-- [ ] File search (default, no prefix) — fuzzy `.md` files
-- [ ] Command mode (`:` prefix)
-- [ ] Heading jump (`#` prefix)
-- [ ] Theme picker (`@` prefix)
-- [ ] Recent files (`>` prefix)
-- [ ] Text search (`/` prefix)
+- [x] File search (default, no prefix) — fuzzy `.md` files via `scan_directory`
+- [x] Command mode (`:` prefix) — toggle sidebar/effects/line-numbers, zoom, open, reload, copy path
+- [x] Heading jump (`#` prefix) — from `get_toc`, indented by level
+- [x] Theme picker (`@` prefix) — placeholder (2 themes)
+- [x] Recent files (`>` prefix) — placeholder (empty)
+- [ ] Text search (`/` prefix) — redirects to search mode, not in palette yet
 
 ### 4.4 Backend Support
-- [ ] `scan_directory` command — recursive `.md` file listing
-- [ ] `get_recent_files` command
-- [ ] `palette_search` / `palette_execute` commands
-- [ ] File entry caching, re-scan on focus
+- [x] `scan_directory` command — recursive `.md` file listing with metadata
+- [ ] `get_recent_files` command — needs LRU in state
+- [x] File entry caching in JS (per-directory)
+- [ ] `palette_search` / `palette_execute` commands — not needed, handled in JS
 
 ---
 
@@ -334,3 +347,5 @@
 | `d2b17f9` | Add README |
 | `cb4acf3` | Implement working MVP (Tauri v2, markdown, tree-sitter, dark theme, file open) |
 | `5408dd5` | Fix Tauri v2 IPC: enable `withGlobalTauri`, plugin invoke syntax |
+| `4acbcbe` | Add implementation progress tracker |
+| | Add file watcher, Helix keyboard, command palette (Phases 2-4) |

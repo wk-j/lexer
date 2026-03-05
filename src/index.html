@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-mode="normal">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,14 +12,41 @@
       <div class="empty-state">
         <h1>Lexer</h1>
         <p>Open a Markdown file to get started.</p>
-        <p class="hint">Drag &amp; drop a <code>.md</code> file, or press <kbd>Ctrl+O</kbd></p>
+        <p class="hint">Drag &amp; drop a <code>.md</code> file, or press <kbd>Cmd+O</kbd></p>
       </div>
     </div>
+    <div class="search-bar" id="search-bar">
+      <span class="search-label">/</span>
+      <input type="text" id="search-input" placeholder="Search..." spellcheck="false" autocomplete="off">
+    </div>
     <div class="status-bar" id="status-bar">
-      <span class="status-file" id="status-file">No file open</span>
-      <span class="status-right" id="status-right"></span>
+      <div class="status-left">
+        <span class="mode-badge mode-normal" id="mode-badge">NOR</span>
+        <span class="status-file" id="status-file">No file open</span>
+      </div>
+      <div class="status-right">
+        <span id="pending-keys"></span>
+      </div>
     </div>
   </div>
+
+  <!-- Which-Key popup -->
+  <div class="which-key" id="which-key"></div>
+
+  <!-- Command Palette -->
+  <div class="palette-overlay" id="palette">
+    <div class="palette-modal">
+      <input type="text" class="palette-input" id="palette-input" placeholder="Search files..." spellcheck="false" autocomplete="off">
+      <div class="palette-results" id="palette-results"></div>
+      <div class="palette-footer">
+        <span class="palette-count" id="palette-count"></span>
+        <span class="palette-hint" id="palette-hint"></span>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
+  <script src="keyboard.js"></script>
+  <script src="palette.js"></script>
 </body>
 </html>

@@ -7,13 +7,13 @@ mod highlight;
 mod markdown;
 mod state;
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::Emitter;
 
 fn main() {
     tracing_subscriber::fmt::init();
 
-    let registry = highlight::LanguageRegistry::build();
+    let registry = Arc::new(highlight::LanguageRegistry::build());
     let app_state = Mutex::new(state::AppState::new());
 
     tauri::Builder::default()
@@ -25,6 +25,7 @@ fn main() {
             commands::open_file,
             commands::get_toc,
             commands::get_current_file,
+            commands::scan_directory,
         ])
         .setup(|app| {
             // If a file path was passed via CLI args, send it to the frontend
