@@ -1,0 +1,14 @@
+# Rust / Cargo
+src-tauri/target/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
