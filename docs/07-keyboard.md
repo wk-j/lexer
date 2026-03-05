@@ -54,6 +54,8 @@ The current mode is displayed in the status bar. Unrecognized keys in any mode a
 | `y`   | Copy current heading anchor / URL to clipboard   |
 | `p`   | Open file from clipboard path                    |
 | `r`   | Force reload current file                        |
+| `H`   | Switch to previous buffer                        |
+| `L`   | Switch to next buffer                            |
 | `q`   | Quit application                                 |
 | `?`   | Show full keymap help overlay                    |
 
@@ -78,6 +80,7 @@ Entered by pressing `Space` in Normal mode. Acts as the primary command launcher
 | Key   | Action                                      |
 | ----- | ------------------------------------------- |
 | `f`   | Open palette: **file search**                |
+| `b`   | **Buffer menu** (sub-mode, see below)        |
 | `r`   | Open palette: **recent files**               |
 | `h`   | Open palette: **heading jump**               |
 | `c`   | Open palette: **command mode**               |
@@ -89,6 +92,32 @@ Entered by pressing `Space` in Normal mode. Acts as the primary command launcher
 | `p`   | Print / export PDF                           |
 | `q`   | Quit                                         |
 | `?`   | Show keymap help                             |
+
+### Space > Buffer Sub-Mode (`Space b`)
+
+After pressing `Space`, pressing `b` enters the buffer sub-menu. A which-key popup shows buffer commands:
+
+| Key   | Action                                      |
+| ----- | ------------------------------------------- |
+| `b`   | Open **buffer picker** (palette mode)        |
+| `n`   | Switch to next buffer                        |
+| `p`   | Switch to previous buffer                    |
+| `d`   | Close current buffer                         |
+| `N`   | New empty buffer                             |
+| `o`   | Close all buffers except current             |
+
+```
++------------------------------------+
+|  b - Buffer                        |
+|                                    |
+|  b  buffer picker                  |
+|  n  next buffer                    |
+|  p  previous buffer                |
+|  d  close buffer                   |
+|  N  new empty buffer               |
+|  o  close others                   |
++------------------------------------+
+```
 
 ## View Mode (`z`)
 

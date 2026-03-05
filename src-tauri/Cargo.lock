@@ -1732,6 +1732,7 @@ dependencies = [
  "tree-sitter-toml-ng",
  "tree-sitter-typescript",
  "walkdir",
+ "window-vibrancy",
 ]
 
 [[package]]

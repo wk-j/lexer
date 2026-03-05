@@ -4,6 +4,10 @@
   "windows": ["*"],
   "permissions": [
     "core:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-is-maximized",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
     "dialog:default",
     "dialog:allow-open",
     "shell:default",

@@ -25,17 +25,28 @@ All windows live in one OS process. Tauri's `WebviewWindowBuilder` creates addit
 
 ### Window State
 
-Each window has its own isolated state managed on the Rust side:
+Each window has its own isolated state managed on the Rust side. A window contains multiple **buffers** (open files), only one of which is active at a time:
 
 ```rust
 #[derive(Debug, Clone, Serialize)]
 struct WindowState {
     id: String,
-    file_path: Option<PathBuf>,
+    buffers: Vec<BufferState>,
+    active_buffer: usize,        // index into buffers vec
     layout: LayoutMode,
+    zoom_level: f32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct BufferState {
+    id: u64,                     // unique buffer ID
+    file_path: Option<PathBuf>,
+    title: String,               // filename or "Untitled"
+    html: String,                // cached rendered HTML
+    toc: Vec<TocEntry>,          // cached TOC
     scroll_position: f64,
     toc_visible: bool,
-    zoom_level: f32,
+    modified: bool,              // dirty flag (file changed on disk)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,6 +60,7 @@ enum LayoutMode {
 struct WindowManager {
     windows: HashMap<String, WindowState>,
     active_window: String,
+    next_buffer_id: u64,
 }
 ```
 
@@ -169,6 +181,261 @@ fn cascade_position(last: &WindowState, screen: &ScreenSize) -> (f64, f64) {
 | Zoom level        | Per-window  |                                         |
 | ToC sidebar       | Per-window  |                                         |
 | Search state      | Per-window  | Active query, match index               |
+| Buffer list       | Per-window  | Each window has its own set of open buffers |
+| Active buffer     | Per-window  | Index into buffer list                  |
+
+---
+
+## Buffers (Tabs)
+
+Lexer supports multiple open files (buffers) within a single window, inspired by Helix's buffer model. Each buffer holds a file's rendered content, scroll position, and TOC. A tab bar at the top of the window shows all open buffers.
+
+### Buffer Model
+
+A **buffer** is an open file (or an empty document). Each window maintains an ordered list of buffers. One buffer is **active** at any time — its content is displayed in the content panel.
+
+```
++-------------------------------------------------------------------+
+| [tab: spec.md] [tab: readme.md*] [tab: notes.md]                  |
++-------------------------------------------------------------------+
+|                                                                   |
+|  # Readme                                                         |
+|  Content of the active buffer (readme.md)                         |
+|                                                                   |
++-------------------------------------------------------------------+
+| NOR | readme.md | 2 min ago                              | Ln 42 |
++-------------------------------------------------------------------+
+```
+
+The `*` on a tab indicates the buffer's file has been modified on disk since last viewed.
+
+### Buffer Lifecycle
+
+```
+Open file (Space f, Cmd+O, drag-drop, CLI, link navigation)
+    |
+    v
+Check: is file already open in a buffer?
+    |
+    +-- YES: switch to that buffer (no duplicate buffers for same file)
+    |
+    +-- NO: create new BufferState, push to window's buffer list
+            render markdown, cache HTML + TOC
+            set as active buffer
+    |
+    v
+Buffer is displayed in content panel
+Tab bar updated to show new tab
+    |
+    ... (user works, switches buffers) ...
+    |
+Close buffer (Space b d, click tab X)
+    |
+    v
+Remove from buffer list
+    -> if active: switch to adjacent buffer (prefer left, then right)
+    -> if last buffer: show empty state
+    -> drop file watcher if no other buffer uses same file
+```
+
+### Buffer Switching
+
+When switching buffers:
+1. Save current scroll position to outgoing buffer's `scroll_position`
+2. Swap content panel HTML to incoming buffer's cached `html`
+3. Restore incoming buffer's `scroll_position`
+4. Update status bar (filename, mode)
+5. Update tab bar active indicator
+6. Update window title
+
+### Tab Bar UI
+
+The tab bar sits between the titlebar drag region and the content panel:
+
+```html
+<div class="tab-bar" id="tab-bar">
+  <div class="tab active" data-buffer-id="1">
+    <span class="tab-title">spec.md</span>
+    <button class="tab-close">&times;</button>
+  </div>
+  <div class="tab" data-buffer-id="2">
+    <span class="tab-modified">●</span>
+    <span class="tab-title">readme.md</span>
+    <button class="tab-close">&times;</button>
+  </div>
+</div>
+```
+
+```css
+.tab-bar {
+    display: flex;
+    align-items: center;
+    height: 32px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--panel-border);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    padding: 0 8px;
+    gap: 2px;
+    -webkit-app-region: no-drag; /* allow clicking tabs in titlebar area */
+}
+
+.tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 6px 6px 0 0;
+    font-size: 12px;
+    font-family: var(--font-family-mono);
+    color: var(--text-secondary);
+    cursor: pointer;
+    white-space: nowrap;
+    max-width: 160px;
+    transition: background var(--transition-ms) ease, color var(--transition-ms) ease;
+}
+
+.tab:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.tab.active {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--accent);
+}
+
+.tab-modified {
+    color: var(--accent);
+    font-size: 8px;
+}
+
+.tab-close {
+    opacity: 0;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+    border-radius: 3px;
+    transition: opacity 100ms ease;
+}
+.tab:hover .tab-close {
+    opacity: 0.6;
+}
+.tab-close:hover {
+    opacity: 1 !important;
+    background: var(--bg-hover);
+    color: var(--error);
+}
+```
+
+### Buffer Tauri Commands
+
+```rust
+#[tauri::command]
+fn open_file(path: String, ...) -> Result<OpenFileResult, String> {
+    // Check if file already open in a buffer — if so, return buffer_id to switch to
+    // Otherwise create new buffer, render, return buffer_id + content
+}
+
+#[tauri::command]
+fn close_buffer(buffer_id: u64, ...) -> Result<BufferSwitchResult, String> {
+    // Remove buffer, return the new active buffer's info (or None if last)
+}
+
+#[tauri::command]
+fn switch_buffer(buffer_id: u64, ...) -> Result<BufferContent, String> {
+    // Save current scroll, set active_buffer, return cached content
+}
+
+#[tauri::command]
+fn next_buffer(...) -> Result<BufferContent, String> {
+    // Cycle to next buffer in list
+}
+
+#[tauri::command]
+fn prev_buffer(...) -> Result<BufferContent, String> {
+    // Cycle to previous buffer in list
+}
+
+#[tauri::command]
+fn list_buffers(...) -> Vec<BufferInfo> {
+    // Return all buffer summaries for tab bar / buffer picker
+}
+```
+
+```rust
+#[derive(Debug, Clone, Serialize)]
+struct BufferInfo {
+    id: u64,
+    title: String,
+    file_path: Option<String>,
+    modified: bool,
+    active: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct BufferContent {
+    buffer_id: u64,
+    html: String,
+    title: String,
+    toc: Vec<TocEntry>,
+    scroll_position: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct OpenFileResult {
+    buffer_id: u64,
+    html: String,
+    title: String,
+    toc: Vec<TocEntry>,
+    already_open: bool,  // true if switched to existing buffer
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct BufferSwitchResult {
+    new_active: Option<BufferContent>,  // None if no buffers remain
+}
+```
+
+### Buffer Picker (Palette Mode)
+
+Accessed via `Space b b` or `Space b` then `b`. Opens the command palette in **buffer picker** mode, listing all open buffers with fuzzy search.
+
+```
++----------------------------------------------+
+|  > readme.md                                  |
+|----------------------------------------------+
+|  ● readme.md         ~/docs/readme.md         |  <- active, modified
+|    spec.md           ~/docs/spec.md            |
+|    notes.md          ~/projects/notes.md       |
++----------------------------------------------+
+|  3 buffers                    ↑↓ select  ⏎ go |
++----------------------------------------------+
+```
+
+The buffer picker palette mode prefix is `%` (internal, not user-typed — triggered by `Space b b`).
+
+### File Watcher Pool
+
+With multiple buffers, file watchers are managed as a pool. Each unique file path gets one watcher. When a file changes:
+
+1. Re-render markdown for the affected buffer(s)
+2. Update the buffer's cached `html` and `toc`
+3. If that buffer is active: emit `file-changed` event to update the content panel
+4. If that buffer is inactive: set `modified = true` (shows `●` on tab)
+5. When the user switches to a modified buffer, the fresh content is already cached
+
+```rust
+struct FileWatcherPool {
+    watchers: HashMap<PathBuf, (FileWatcher, Vec<u64>)>,  // path -> (watcher, buffer_ids)
+}
+```
 
 ---
 
@@ -382,6 +649,43 @@ Switching between layouts uses a smooth cross-fade:
 
 ---
 
+## Buffer Keyboard Navigation
+
+Buffer management is accessed via `Space b` in Normal mode (Helix-style, matches Helix's buffer commands):
+
+| Key          | Action                                  |
+| ------------ | --------------------------------------- |
+| `Space b b`  | Open buffer picker (palette mode)        |
+| `Space b n`  | Switch to next buffer                    |
+| `Space b p`  | Switch to previous buffer                |
+| `Space b d`  | Close current buffer                     |
+| `Space b N`  | New empty buffer                         |
+| `Space b o`  | Close all buffers except current          |
+
+The which-key popup for `Space b` shows:
+
+```
++------------------------------------+
+|  b - Buffer                        |
+|                                    |
+|  b  buffer picker                  |
+|  n  next buffer                    |
+|  p  previous buffer                |
+|  d  close buffer                   |
+|  N  new empty buffer               |
+|  o  close others                   |
++------------------------------------+
+```
+
+Quick buffer switching (Normal mode, no Space prefix):
+
+| Key          | Action                                  |
+| ------------ | --------------------------------------- |
+| `H`          | Switch to previous buffer (like Helix)   |
+| `L`          | Switch to next buffer (like Helix)       |
+
+---
+
 ## Window Keyboard Navigation
 
 Window management is accessed via `Space w` in Normal mode (Helix-style):
@@ -429,18 +733,22 @@ USAGE:
     lexer [OPTIONS] [FILE]...
 
 ARGS:
-    <FILE>...    One or more Markdown files (each opens in its own window)
+    <FILE>...    One or more Markdown files (open as buffers in one window)
 
 OPTIONS:
     --new-window           Force open in a new window (even if already running)
+    --split-windows        Open each file in its own window instead of as buffers
     --layout <LAYOUT>      Initial layout: default | focus | zen | split
 ```
 
 Opening multiple files from the CLI:
 
 ```bash
-# Opens two windows
+# Opens two buffers (tabs) in one window
 lexer docs/overview.md docs/api.md
+
+# Opens each in its own window
+lexer --split-windows docs/overview.md docs/api.md
 
 # Opens in zen mode
 lexer --layout zen notes/draft.md
@@ -455,20 +763,30 @@ On quit, Lexer saves the window arrangement to restore on next launch:
 ```toml
 # ~/.config/lexer/session.toml (auto-generated)
 [[windows]]
-file = "~/docs/spec.md"
 layout = "focus"
+active_buffer = 0
 x = 100
 y = 100
 width = 900
 height = 700
+
+[[windows.buffers]]
+file = "~/docs/spec.md"
 scroll = 1240.0
 
+[[windows.buffers]]
+file = "~/docs/api.md"
+scroll = 0.0
+
 [[windows]]
-file = "~/docs/readme.md"
 layout = "split"
+active_buffer = 0
 x = 130
 y = 130
 width = 1000
 height = 750
+
+[[windows.buffers]]
+file = "~/docs/readme.md"
 scroll = 0.0
 ```

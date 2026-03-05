@@ -8,13 +8,13 @@ mod markdown;
 mod state;
 
 use std::sync::{Arc, Mutex};
-use tauri::Emitter;
+use tauri::{Emitter, Manager};
 
 fn main() {
     tracing_subscriber::fmt::init();
 
     let registry = Arc::new(highlight::LanguageRegistry::build());
-    let app_state = Mutex::new(state::AppState::new());
+    let app_state = Arc::new(Mutex::new(state::AppState::new()));
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -26,8 +26,29 @@ fn main() {
             commands::get_toc,
             commands::get_current_file,
             commands::scan_directory,
+            commands::close_buffer,
+            commands::switch_buffer,
+            commands::next_buffer,
+            commands::prev_buffer,
+            commands::list_buffers,
+            commands::save_scroll,
+            commands::close_other_buffers,
         ])
         .setup(|app| {
+            // Apply macOS vibrancy (frosted glass blur behind the window)
+            #[cfg(target_os = "macos")]
+            {
+                use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+                let window = app.get_webview_window("main").unwrap();
+                apply_vibrancy(
+                    &window,
+                    NSVisualEffectMaterial::UnderWindowBackground,
+                    None,
+                    None,
+                )
+                .expect("Failed to apply vibrancy");
+            }
+
             // If a file path was passed via CLI args, send it to the frontend
             let args: Vec<String> = std::env::args().collect();
             if let Some(file_arg) = args.get(1) {

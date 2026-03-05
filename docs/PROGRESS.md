@@ -246,67 +246,127 @@
 
 ---
 
-## Phase 6: Custom Theme System
+## Phase 6: Buffer / Tab Support
 
-### 6.1 Theme Engine (`src-tauri/src/theme/`)
+### 6.1 Buffer State (`src-tauri/src/state.rs`)
+- [x] `BufferState` struct (id, file_path, title, html, toc, scroll_position, modified)
+- [x] `AppState` refactored: `buffers: Vec<BufferState>`, `active_buffer: usize`, `next_buffer_id: u64`
+- [x] Dedup: opening an already-open file switches to existing buffer
+
+### 6.2 Buffer Tauri Commands (`src-tauri/src/commands.rs`)
+- [x] `open_file` updated: creates buffer, returns `OpenFileResult` with `buffer_id`
+- [x] `close_buffer(buffer_id)` — remove buffer, return new active
+- [x] `switch_buffer(buffer_id)` — save scroll, switch, return content
+- [x] `next_buffer` / `prev_buffer` — cycle through buffer list
+- [x] `list_buffers` — return all buffer summaries
+- [x] `save_scroll(scroll)` — persist scroll position for active buffer
+- [x] `close_other_buffers` — close all except active
+
+### 6.3 File Watcher Updates
+- [x] Watcher per unique file (not per buffer)
+- [x] On file change: update buffer's cached html/toc, emit to frontend if active, set modified if inactive
+- [x] `buffer-modified` event for inactive buffer changes
+- [x] Drop watcher when last buffer using that file is closed
+
+### 6.4 Tab Bar UI (`src/index.html`, `src/style.css`)
+- [x] Tab bar HTML structure (between titlebar and content)
+- [x] Tab styling: active indicator, modified dot, close button, overflow scroll
+- [x] Click to switch, click X to close
+- [x] Tab context: middle-click to close
+
+### 6.5 Buffer Keyboard Navigation (`src/keyboard.js`)
+- [x] `Space b` sub-mode: b (picker), n (next), p (prev), d (close), N (new), o (close others)
+- [x] `H` / `L` in Normal mode: prev/next buffer
+- [x] Which-key labels for buffer sub-mode
+- [x] Buffer picker palette mode (`%` prefix, triggered by `Space b b`)
+
+### 6.6 Frontend Buffer Switching (`src/app.js`)
+- [x] `switchBuffer()`: save scroll, swap HTML, restore scroll, update tab bar
+- [x] Tab bar rendering from `list_buffers` result
+- [ ] `buffers-changed` event listener to re-render tab bar (deferred — tab bar updates inline)
+- [x] `buffer-modified` event listener to show modified indicator on tab
+- [x] Update `openFile()` to handle `OpenFileResult.already_open`
+
+### 6.7 Transparent Window with Vibrancy
+- [x] `"transparent": true` in `tauri.conf.json` window config
+- [x] `"macOSPrivateApi": true` in `tauri.conf.json` app config
+- [x] `window-vibrancy = "0.6"` in Cargo.toml
+- [x] `apply_vibrancy(NSVisualEffectMaterial::UnderWindowBackground)` in setup hook
+- [x] `html`, `body`, `.app` backgrounds set to `transparent`
+- [x] `--bg-base` changed from opaque `#0d1117` to `transparent`, added `--bg-base-opaque` for text-on-accent use
+- [x] `--code-bg` changed to `rgba(22, 27, 34, 0.45)` with backdrop-filter blur
+- [x] `--panel-bg` reduced to `rgba(22, 27, 34, 0.55)`
+- [x] Tab bar, search bar, status bar: semi-transparent with backdrop-filter blur
+- [x] Which-key popup, command palette modal: backdrop-filter frosted glass
+- [x] `.app-backdrop` gradient: removed opaque `var(--bg-base)` fallback layer, reduced gradient intensities
+- [x] Blockquotes, pre blocks: added backdrop-filter blur
+- [x] Mode badge, palette selected item: use `--bg-base-opaque` for text color
+- [x] Full-window dragging: mousedown on non-interactive areas triggers `startDragging()`
+- [x] Non-drag zones: content panel, tab bar, status bar, search bar, palette, buttons, inputs, links
+
+---
+
+## Phase 7: Custom Theme System
+
+### 7.1 Theme Engine (`src-tauri/src/theme/`)
 - [ ] `Theme` struct parsed from TOML
 - [ ] `to_css()` method generating `:root` custom properties
 - [ ] Theme file discovery (user dir, env var, built-in)
 - [ ] Merge with base defaults, validation
 
-### 6.2 Built-in Themes (`src-tauri/themes/`)
+### 7.2 Built-in Themes (`src-tauri/themes/`)
 - [ ] `lexer-dark.toml`
 - [ ] `lexer-light.toml`
 - [ ] `lexer-mono.toml`
 - [ ] `lexer-solarized.toml`
 - [ ] `lexer-nord.toml`
 
-### 6.3 Tauri Commands
+### 7.3 Tauri Commands
 - [ ] `list_themes`
 - [ ] `load_theme` (resolve, parse, return CSS)
 - [ ] `get_theme` / `set_theme`
 - [ ] `get_theme_config` (full parsed theme for preview)
 
-### 6.4 Theme Hot-Reload
+### 7.4 Theme Hot-Reload
 - [ ] Watch `~/.config/lexer/themes/` directory
 - [ ] Auto-recompile + emit `theme-updated` event on change
 
 ---
 
-## Phase 7: Multi-Window Support
+## Phase 8: Multi-Window Support
 
-### 7.1 Window Manager (`src-tauri/src/window/`)
+### 8.1 Window Manager (`src-tauri/src/window/`)
 - [ ] `WindowManager` struct tracking all windows
 - [ ] `WindowState` per window (id, file, layout, scroll, zoom, ToC)
 - [ ] Window cascade positioning (30px offset)
 
-### 7.2 Tauri Commands
+### 8.2 Tauri Commands
 - [ ] `new_window` / `close_window`
 - [ ] `list_windows` / `focus_window`
 
-### 7.3 Window Lifecycle
+### 8.3 Window Lifecycle
 - [ ] Create -> boot frontend -> apply state -> track
 - [ ] On close: unwatch file, quit if last (macOS: keep alive)
 
-### 7.4 Shared vs Per-Window State
+### 8.4 Shared vs Per-Window State
 - [ ] Global: theme, config, language registry, watcher pool
 - [ ] Per-window: file, scroll, layout, zoom, ToC, search
 
-### 7.5 Keyboard (`Space w`)
+### 8.5 Keyboard (`Space w`)
 - [ ] `n` (new), `N` (clone), `c` (close), `w`/`W` (cycle)
 - [ ] `l` (window list), `d`/`f`/`z`/`s` (layouts)
 
 ---
 
-## Phase 8: Focus Layouts
+## Phase 9: Focus Layouts
 
-### 8.1 Layout CSS (`src/layout.css`)
+### 9.1 Layout CSS (`src/layout.css`)
 - [ ] Default layout (full chrome, optional ToC sidebar)
 - [ ] Focus layout (centered 700px column, no sidebar)
 - [ ] Zen layout (fullscreen, no chrome, Escape to exit)
 - [ ] Split layout (pinned ToC 280px, resizable drag handle)
 
-### 8.2 Layout JS (`src/layout.js`)
+### 9.2 Layout JS (`src/layout.js`)
 - [ ] `set_layout` / `get_layout` commands
 - [ ] Data attribute switching on root element
 - [ ] Smooth transitions between layouts
@@ -314,9 +374,9 @@
 
 ---
 
-## Phase 9: Configuration & CLI
+## Phase 10: Configuration & CLI
 
-### 9.1 CLI Arguments (via `clap`)
+### 10.1 CLI Arguments (via `clap`)
 - [ ] `[FILE]...` multiple files
 - [ ] `-t, --theme` theme selection
 - [ ] `--layout` initial layout
@@ -324,7 +384,7 @@
 - [ ] `--new-window` force new window
 - [ ] `-h, --help` / `-V, --version`
 
-### 9.2 Config File (`~/.config/lexer/config.toml`)
+### 10.2 Config File (`~/.config/lexer/config.toml`)
 - [ ] `[appearance]`: theme, default layout
 - [ ] `[behavior]`: live_reload, preserve_scroll, restore_session
 - [ ] `[effects]`: per-effect overrides
@@ -332,7 +392,7 @@
 
 ---
 
-## Phase 10: Future Enhancements
+## Phase 11: Future Enhancements
 
 - [ ] Export to PDF / HTML
 - [ ] Math rendering (KaTeX/MathJax)
@@ -341,7 +401,6 @@
 - [ ] Theme marketplace
 - [ ] Plugin system
 - [ ] Session persistence
-- [ ] Tabs within windows
 - [ ] Custom keymap file
 
 ---
@@ -357,4 +416,7 @@
 | `4acbcbe` | Add implementation progress tracker |
 | `7b3eaa6` | Add file watcher, Helix keyboard, command palette (Phases 2-4) |
 | `9a5d85c` | Fix duplicate variable errors, palette Ctrl+N/P navigation |
-| | Add visual effects system (Phase 5) |
+| `59a1a16` | Add visual effects system (Phase 5) |
+| `f41b988` | Transparent titlebar and remove h2 glow box |
+| `4b879e3` | Improve scroll: custom eased animation for j/k navigation |
+| | Phase 6: Buffer/tab support + transparent vibrancy window (pending commit) |

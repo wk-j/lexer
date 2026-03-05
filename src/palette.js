@@ -36,11 +36,21 @@ class CommandPalette {
       '@': 'theme',
       '>': 'recent',
       '/': 'search',
+      '%': 'buffer',
     };
     this.mode = modeMap[prefix] || 'file';
 
     // Set input with prefix
     this.input.value = prefix || '';
+    const placeholders = {
+      file: 'Search files...',
+      command: 'Type a command...',
+      heading: 'Jump to heading...',
+      theme: 'Pick a theme...',
+      recent: 'Recent files...',
+      buffer: 'Switch to buffer...',
+    };
+    this.input.placeholder = placeholders[this.mode] || 'Search...';
     this.input.focus();
 
     // Load candidates
@@ -136,6 +146,9 @@ class CommandPalette {
       case 'recent':
         this._loadRecent();
         break;
+      case 'buffer':
+        await this._loadBuffers();
+        break;
       default:
         this.items = [];
     }
@@ -213,13 +226,29 @@ class CommandPalette {
     this.items = [];
   }
 
+  async _loadBuffers() {
+    try {
+      const buffers = await invoke('list_buffers');
+      this.items = buffers.map(buf => ({
+        label: (buf.active ? '● ' : '  ') + buf.title,
+        detail: buf.file_path || 'Untitled',
+        value: buf.id,
+        type: 'buffer',
+        modified: buf.modified,
+      }));
+    } catch (err) {
+      console.error('list_buffers failed:', err);
+      this.items = [];
+    }
+  }
+
   // --- Filtering ---
 
   _onInput() {
     const raw = this.input.value;
 
     // Check if prefix changed mode
-    const prefixMap = { ':': 'command', '#': 'heading', '@': 'theme', '>': 'recent' };
+    const prefixMap = { ':': 'command', '#': 'heading', '@': 'theme', '>': 'recent', '%': 'buffer' };
     const firstChar = raw[0];
     if (prefixMap[firstChar] && this.mode !== prefixMap[firstChar]) {
       this.mode = prefixMap[firstChar];
@@ -238,7 +267,7 @@ class CommandPalette {
   _filter() {
     const raw = this.input.value;
     // Strip mode prefix for query
-    const prefixes = [':', '#', '@', '>'];
+    const prefixes = [':', '#', '@', '>', '%'];
     const query = prefixes.includes(raw[0]) ? raw.slice(1).trim() : raw.trim();
 
     if (!query) {
@@ -258,7 +287,7 @@ class CommandPalette {
 
   _render() {
     const raw = this.input.value;
-    const prefixes = [':', '#', '@', '>'];
+    const prefixes = [':', '#', '@', '>', '%'];
     const query = prefixes.includes(raw[0]) ? raw.slice(1).trim() : raw.trim();
 
     let html = '';
@@ -314,6 +343,7 @@ class CommandPalette {
       heading: 'Type to filter headings  ·  Enter to jump',
       theme: 'Type to filter themes  ·  Enter to apply',
       recent: 'Recently opened files  ·  Enter to open',
+      buffer: 'Type to filter buffers  ·  Enter to switch',
     };
     this.hintEl.textContent = hints[this.mode] || '';
   }
@@ -327,14 +357,9 @@ class CommandPalette {
 
     switch (item.type) {
       case 'file':
-        invoke('open_file', { path: item.value }).then(result => {
-          const contentEl = document.getElementById('content');
-          const statusFileEl = document.getElementById('status-file');
-          contentEl.innerHTML = result.html;
-          statusFileEl.textContent = result.title;
-          document.title = `${result.title} - Lexer`;
-          contentEl.scrollTop = 0;
-        }).catch(err => console.error('Failed to open file:', err));
+        if (window.lexerApp) {
+          window.lexerApp.openFile(item.value);
+        }
         break;
 
       case 'heading':
@@ -350,6 +375,12 @@ class CommandPalette {
 
       case 'theme':
         // Will be implemented with theme engine
+        break;
+
+      case 'buffer':
+        if (window.lexerApp) {
+          window.lexerApp.switchBuffer(item.value);
+        }
         break;
     }
   }
@@ -376,11 +407,9 @@ class CommandPalette {
         if (kb) kb._zoomReset();
         break;
       case 'open-file':
-        invoke('plugin:dialog|open', {
-          options: { multiple: false, filters: [{ name: 'Markdown', extensions: ['md', 'markdown'] }] },
-        }).then(selected => {
-          if (selected) invoke('open_file', { path: selected });
-        });
+        if (window.lexerApp) {
+          window.lexerApp.openFileDialog();
+        }
         break;
       case 'reload':
         if (kb) kb._reload();

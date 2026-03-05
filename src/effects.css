@@ -3,7 +3,7 @@
 
 /* === Background Layers === */
 
-/* Gradient mesh backdrop */
+/* Gradient mesh backdrop — transparent so macOS vibrancy shows through */
 .app-backdrop {
   position: fixed;
   inset: 0;
@@ -12,8 +12,7 @@
   background:
     radial-gradient(ellipse at 20% 50%, var(--gradient-a) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 20%, var(--gradient-b) 0%, transparent 50%),
-    radial-gradient(ellipse at 50% 80%, var(--gradient-c) 0%, transparent 50%),
-    var(--bg-base);
+    radial-gradient(ellipse at 50% 80%, var(--gradient-c) 0%, transparent 50%);
   transition: background 600ms ease;
 }
 
@@ -320,7 +319,7 @@
 
 /* === Effects Off Toggle === */
 
-body.effects-off .app-backdrop { background: var(--bg-base); }
+body.effects-off .app-backdrop { background: transparent; }
 body.effects-off .noise-overlay { display: none; }
 body.effects-off .cursor-spotlight { display: none; }
 body.effects-off .particle-canvas { display: none; }

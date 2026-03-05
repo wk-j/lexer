@@ -8,9 +8,10 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 # Tauri
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-shell = "2"
+window-vibrancy = "0.6"
 
 # Markdown
 pulldown-cmark = { version = "0.12", features = ["html"] }

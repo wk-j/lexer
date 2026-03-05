@@ -55,6 +55,8 @@ class KeyboardEngine {
         'r':      { fn: () => this._reload() },
         'n':      { fn: () => this._searchNext(1) },
         'N':      { fn: () => this._searchNext(-1) },
+        'H':      { fn: () => window.lexerApp?.prevBuffer() },
+        'L':      { fn: () => window.lexerApp?.nextBuffer() },
         '?':      { fn: () => this._showHelp() },
         'g':      { mode: 'goto' },
         ' ':      { mode: 'space' },
@@ -72,6 +74,12 @@ class KeyboardEngine {
 
       space: {
         'f':  { fn: () => this._openPalette('') },
+        'bb': { fn: () => this._openPalette('%') },
+        'bn': { fn: () => window.lexerApp?.nextBuffer() },
+        'bp': { fn: () => window.lexerApp?.prevBuffer() },
+        'bd': { fn: () => this._closeCurrentBuffer() },
+        'bN': { fn: () => this._newEmptyBuffer() },
+        'bo': { fn: () => window.lexerApp?.closeOtherBuffers() },
         'r':  { fn: () => this._openPalette('>') },
         'h':  { fn: () => this._openPalette('#') },
         'c':  { fn: () => this._openPalette(':') },
@@ -108,6 +116,7 @@ class KeyboardEngine {
         title: 'Space - Commands',
         keys: [
           ['f', 'file search'],
+          ['b', 'buffer...'],
           ['r', 'recent files'],
           ['h', 'heading jump'],
           ['c', 'command mode'],
@@ -116,6 +125,17 @@ class KeyboardEngine {
           ['s', 'toggle sidebar'],
           ['e', 'toggle effects'],
           ['l', 'toggle line numbers'],
+        ],
+      },
+      'space:b': {
+        title: 'b - Buffer',
+        keys: [
+          ['b', 'buffer picker'],
+          ['n', 'next buffer'],
+          ['p', 'previous buffer'],
+          ['d', 'close buffer'],
+          ['N', 'new empty buffer'],
+          ['o', 'close others'],
         ],
       },
       view: {
@@ -170,6 +190,11 @@ class KeyboardEngine {
       this.pending = seq;
       this._updatePending();
       this._resetTimeout();
+      // Show contextual which-key for sub-modes (e.g. Space > b shows buffer menu)
+      const subKey = `${this.mode}:${seq}`;
+      if (this.whichKeyLabels[subKey]) {
+        this._showWhichKey(subKey);
+      }
       return;
     }
 
@@ -458,6 +483,19 @@ class KeyboardEngine {
   _openPalette(prefix) {
     // Dispatch custom event for palette.js to handle
     window.dispatchEvent(new CustomEvent('open-palette', { detail: { prefix } }));
+  }
+
+  _closeCurrentBuffer() {
+    const id = window.lexerApp?.currentBufferId;
+    if (id != null) {
+      window.lexerApp.closeBuffer(id);
+    }
+  }
+
+  _newEmptyBuffer() {
+    // Open an empty buffer — for now, just open the palette in file mode
+    // A true empty buffer would need backend support for buffers without files
+    this._openPalette('');
   }
 
   _showHelp() {
