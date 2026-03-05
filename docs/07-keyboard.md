@@ -57,7 +57,9 @@ The current mode is displayed in the status bar. Unrecognized keys in any mode a
 | `r`   | Force reload current file                        |
 | `H`   | Switch to previous buffer                        |
 | `L`   | Switch to next buffer                            |
-| `q`   | Quit application                                 |
+| `Ctrl+o` | Previous buffer (Helix jumplist style)        |
+| `Ctrl+i` | Next buffer (Helix jumplist style)            |
+| `q`   | Quit (close current window)                      |
 | `?`   | Show full keymap help overlay                    |
 
 ## Goto Mode (`g`)

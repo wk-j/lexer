@@ -52,11 +52,13 @@ class KeyboardEngine {
         'S-Tab':  { fn: () => this._focusLink(-1) },
         'Enter':  { fn: () => this._activateFocusedLink() },
         'y':      { fn: () => this._copyAnchor() },
+        'p':      { fn: () => this._openFromClipboard() },
         'r':      { fn: () => this._reload() },
         'n':      { fn: () => this._searchNext(1) },
         'N':      { fn: () => this._searchNext(-1) },
         'H':      { fn: () => window.lexerApp?.prevBuffer() },
         'L':      { fn: () => window.lexerApp?.nextBuffer() },
+        'q':      { fn: () => this._quit() },
         '?':      { fn: () => this._showHelp() },
         'g':      { mode: 'goto' },
         ' ':      { mode: 'space' },
@@ -71,6 +73,8 @@ class KeyboardEngine {
         'l':  { fn: () => this._jumpToLastHeading() },
         't':  { fn: () => this._toggleToc() },
         'w':  { fn: () => this._enterHintMode() },
+        'n':  { fn: () => this._gotoSiblingFile(1) },
+        'p':  { fn: () => this._gotoSiblingFile(-1) },
       },
 
       space: {
@@ -123,6 +127,8 @@ class KeyboardEngine {
           ['l', 'last heading'],
           ['t', 'table of contents'],
           ['w', 'link hints (jump)'],
+          ['n', 'next file in dir'],
+          ['p', 'prev file in dir'],
         ],
       },
       space: {
@@ -561,6 +567,56 @@ class KeyboardEngine {
     // Open an empty buffer — for now, just open the palette in file mode
     // A true empty buffer would need backend support for buffers without files
     this._openPalette('');
+  }
+
+  // --- Clipboard, Quit, Sibling File ---
+
+  async _openFromClipboard() {
+    try {
+      const text = await navigator.clipboard.readText();
+      const trimmed = text.trim();
+      if (trimmed && /\.(md|markdown|mkd|mdx)$/i.test(trimmed)) {
+        window.lexerApp?.openFile(trimmed);
+      } else if (trimmed && !trimmed.includes('\n')) {
+        // Try opening anyway — backend will error if file doesn't exist
+        window.lexerApp?.openFile(trimmed);
+      }
+    } catch (err) {
+      console.error('Clipboard read failed:', err);
+    }
+  }
+
+  _quit() {
+    try {
+      window.__TAURI__.window.getCurrentWindow().close();
+    } catch (_) {}
+  }
+
+  async _gotoSiblingFile(direction) {
+    try {
+      const currentFile = await invoke('get_current_file');
+      if (!currentFile) return;
+      const lastSlash = currentFile.lastIndexOf('/');
+      const dir = lastSlash >= 0 ? currentFile.substring(0, lastSlash) : '.';
+      const entries = await invoke('scan_directory', { path: dir });
+      if (entries.length === 0) return;
+
+      // Find current file in the list
+      const currentName = currentFile.substring(lastSlash + 1);
+      const idx = entries.findIndex(e => e.name === currentName);
+      if (idx < 0) {
+        // Current file not found — open first or last
+        const target = direction > 0 ? entries[0] : entries[entries.length - 1];
+        window.lexerApp?.openFile(dir + '/' + target.path);
+        return;
+      }
+
+      const newIdx = idx + direction;
+      if (newIdx < 0 || newIdx >= entries.length) return; // at boundary
+      window.lexerApp?.openFile(dir + '/' + entries[newIdx].path);
+    } catch (err) {
+      console.error('Sibling file navigation failed:', err);
+    }
   }
 
   // --- Layout & Window Actions ---

@@ -197,7 +197,7 @@ class CommandPalette {
         await this._loadThemes();
         break;
       case 'recent':
-        this._loadRecent();
+        await this._loadRecent();
         break;
       case 'buffer':
         await this._loadBuffers();
@@ -294,9 +294,22 @@ class CommandPalette {
     }
   }
 
-  _loadRecent() {
-    // Placeholder — will be populated when recent files tracking is implemented
-    this.items = [];
+  async _loadRecent() {
+    try {
+      const files = await invoke('get_recent_files');
+      this.items = files.map(path => {
+        const name = path.split('/').pop() || path;
+        return {
+          label: name,
+          detail: path,
+          value: path,
+          type: 'file',
+        };
+      });
+    } catch (err) {
+      console.error('get_recent_files failed:', err);
+      this.items = [];
+    }
   }
 
   async _loadBuffers() {

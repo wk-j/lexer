@@ -108,6 +108,9 @@ pub fn open_file(
         }
     }
 
+    // Track in recent files
+    st.push_recent(&canonical);
+
     // Check if this file is already open in a buffer
     if let Some(idx) = st.find_buffer_by_path(&canonical) {
         st.active_buffer = idx;
@@ -503,6 +506,18 @@ pub fn scan_directory(path: String) -> Result<Vec<FileEntry>, String> {
     }
     entries.sort_by(|a, b| b.modified.cmp(&a.modified));
     Ok(entries)
+}
+
+// --- Recent files ---
+
+#[tauri::command]
+pub fn get_recent_files(state: State<'_, Arc<Mutex<AppState>>>) -> Result<Vec<String>, String> {
+    let st = state.lock().map_err(|e| e.to_string())?;
+    Ok(st
+        .recent_files
+        .iter()
+        .map(|p| p.to_string_lossy().into_owned())
+        .collect())
 }
 
 // --- Theme commands ---

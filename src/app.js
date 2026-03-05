@@ -395,6 +395,26 @@ listen('theme-updated', (event) => {
   applyThemeCss(event.payload);
 });
 
+// Startup configuration from backend (CLI args + config file)
+listen('startup-config', async (event) => {
+  const config = event.payload;
+
+  // Apply theme
+  if (config.theme) {
+    await loadTheme(config.theme);
+  }
+
+  // Apply layout
+  if (config.layout && config.layout !== 'default') {
+    document.documentElement.dataset.layout = config.layout;
+  }
+
+  // Disable effects if requested
+  if (config.noEffects) {
+    document.body.classList.add('effects-off');
+  }
+});
+
 // --- Expose for other modules ---
 window.lexerApp = {
   openFile,

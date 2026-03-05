@@ -45,6 +45,8 @@ pub struct AppState {
     pub layout: LayoutMode,
     /// File watchers keyed by canonical path. Each entry tracks which buffer IDs use it.
     pub watchers: Vec<(PathBuf, FileWatcher, Vec<u64>)>,
+    /// Recently opened files (most recent first), max 50 entries.
+    pub recent_files: Vec<PathBuf>,
 }
 
 impl AppState {
@@ -55,6 +57,16 @@ impl AppState {
             next_buffer_id: 1,
             layout: LayoutMode::Default,
             watchers: Vec::new(),
+            recent_files: Vec::new(),
+        }
+    }
+
+    /// Add a file to the recent files list (moves to front if already present).
+    pub fn push_recent(&mut self, path: &PathBuf) {
+        self.recent_files.retain(|p| p != path);
+        self.recent_files.insert(0, path.clone());
+        if self.recent_files.len() > 50 {
+            self.recent_files.truncate(50);
         }
     }
 
