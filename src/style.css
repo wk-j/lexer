@@ -26,6 +26,20 @@
   --table-border: rgba(110, 118, 129, 0.2);
   --table-row-alt: rgba(110, 118, 129, 0.04);
 
+  /* Effect variables */
+  --gradient-a: rgba(88, 166, 255, 0.15);
+  --gradient-b: rgba(210, 168, 255, 0.12);
+  --gradient-c: rgba(126, 231, 135, 0.10);
+  --glow-color: rgba(88, 166, 255, 0.25);
+  --glow-radius: 20px;
+  --spotlight-color: rgba(255, 255, 255, 0.03);
+  --heading-gradient: linear-gradient(135deg, var(--accent), var(--text-primary));
+  --code-line-hover: rgba(255, 255, 255, 0.04);
+  --blur: 20px;
+  --saturate: 180%;
+  --cursor-x: -100px;
+  --cursor-y: -100px;
+
   /* Syntax highlight colors */
   --hl-keyword: #ff7b72;
   --hl-string: #a5d6ff;
@@ -70,6 +84,8 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  position: relative;
+  z-index: 2;
 }
 
 .content-panel {
@@ -80,6 +96,7 @@ body {
   max-width: 900px;
   margin: 0 auto;
   width: 100%;
+  position: relative;
 }
 
 /* === Status Bar === */

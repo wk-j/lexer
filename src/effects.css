@@ -1,0 +1,343 @@
+/* === Lexer Visual Effects === */
+/* All effects use CSS custom properties and can be toggled via .effects-off */
+
+/* === Background Layers === */
+
+/* Gradient mesh backdrop */
+.app-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 20% 50%, var(--gradient-a) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, var(--gradient-b) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, var(--gradient-c) 0%, transparent 50%),
+    var(--bg-base);
+  transition: background 600ms ease;
+}
+
+/* Noise texture overlay */
+.noise-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* Cursor spotlight */
+.cursor-spotlight {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    600px circle at var(--cursor-x) var(--cursor-y),
+    var(--spotlight-color),
+    transparent 60%
+  );
+  transition: background 80ms ease;
+}
+
+/* Particle canvas (behind everything) */
+.particle-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* === Frosted Glass === */
+
+.content-panel {
+  backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+}
+
+/* === Code Block Effects === */
+
+/* Ambient glow */
+.content-panel pre {
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.2),
+    0 0 var(--glow-radius) var(--glow-color);
+  transition: box-shadow 200ms ease, transform 150ms ease;
+  position: relative;
+}
+
+/* Hover: intensify glow, slight scale */
+.content-panel pre:hover {
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.2),
+    0 0 calc(var(--glow-radius) * 1.5) var(--glow-color);
+  transform: scale(1.005);
+}
+
+/* Scroll shadows for overflowing code blocks */
+.content-panel pre code {
+  background:
+    linear-gradient(var(--code-bg) 30%, transparent) center top,
+    linear-gradient(transparent, var(--code-bg) 70%) center bottom,
+    radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.12), transparent) center top,
+    radial-gradient(farthest-side at 50% 100%, rgba(0, 0, 0, 0.12), transparent) center bottom;
+  background-repeat: no-repeat;
+  background-size: 100% 40px, 100% 40px, 100% 10px, 100% 10px;
+  background-attachment: local, local, scroll, scroll;
+}
+
+/* Focus dim: dim surrounding content when hovering a code block */
+.content-panel:has(pre:hover) > *:not(pre:hover) {
+  opacity: 0.5;
+  transition: opacity 300ms ease;
+}
+.content-panel pre:hover {
+  opacity: 1;
+}
+
+/* === Blockquote Effects === */
+
+.content-panel blockquote {
+  border-image: linear-gradient(180deg, var(--accent), var(--gradient-b)) 1;
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+}
+
+/* === Heading Effects === */
+
+/* Gradient text fill */
+.content-panel h1,
+.content-panel h2,
+.content-panel h3 {
+  background: var(--heading-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Section divider glow below h2 */
+.content-panel h2 {
+  padding-bottom: 10px;
+  box-shadow: 0 1px 12px -4px var(--accent);
+}
+
+/* Underline reveal on scroll-in */
+.content-panel h2::after {
+  content: '';
+  display: block;
+  width: 0;
+  height: 2px;
+  margin-top: 6px;
+  background: var(--accent);
+  transition: width 500ms ease-out;
+}
+.content-panel h2.visible::after {
+  width: 60px;
+}
+
+/* === Link Effects === */
+
+/* Underline slide-in on hover */
+.content-panel a {
+  text-decoration: none;
+  position: relative;
+}
+.content-panel a::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 0;
+  height: 1.5px;
+  background: var(--link-hover);
+  transition: width 200ms ease;
+}
+.content-panel a:hover::after {
+  width: 100%;
+}
+
+/* === Horizontal Rule Effects === */
+
+.content-panel hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  box-shadow: 0 0 8px var(--glow-color);
+  animation: hr-pulse 4s ease-in-out infinite;
+}
+@keyframes hr-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* === Image Effects === */
+
+.content-panel img {
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  transition: transform 250ms ease, box-shadow 250ms ease;
+}
+.content-panel img:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  cursor: zoom-in;
+}
+
+/* === Table Effects === */
+
+.content-panel thead th {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* === Transitions === */
+
+/* Theme switch cross-fade */
+:root {
+  transition:
+    --bg-base 300ms ease,
+    --panel-bg 300ms ease,
+    --text-primary 300ms ease,
+    --accent 300ms ease;
+}
+
+/* Content reload fade */
+.content-panel.reloading {
+  opacity: 0.3;
+  transition: opacity 100ms ease;
+}
+.content-panel:not(.reloading) {
+  transition: opacity 200ms ease;
+}
+
+/* === Scroll-in Fade Up === */
+
+.fade-up {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 400ms ease-out, transform 400ms ease-out;
+}
+.fade-up.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* === Click Ripple === */
+
+.ripple {
+  position: fixed;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.12;
+  transform: scale(0);
+  animation: ripple-expand 600ms ease-out forwards;
+  pointer-events: none;
+  z-index: 9999;
+}
+@keyframes ripple-expand {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* === Lightbox === */
+
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms ease;
+  cursor: zoom-out;
+}
+.lightbox-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.lightbox-overlay img {
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: 8px;
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.5);
+}
+
+/* === Code Block Copy Button === */
+
+.code-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: var(--font-family-mono);
+  color: var(--text-muted);
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 150ms ease, box-shadow 200ms ease;
+  z-index: 5;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.content-panel pre:hover .code-copy-btn {
+  opacity: 1;
+}
+.code-copy-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+.code-copy-btn.copied {
+  color: #7ee787;
+  border-color: #7ee787;
+  box-shadow: 0 0 12px rgba(126, 231, 135, 0.3);
+}
+
+/* === Reduced Motion === */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .particle-canvas { display: none; }
+  .cursor-spotlight { display: none; }
+  .noise-overlay { display: none; }
+  .fade-up { opacity: 1; transform: none; }
+}
+
+/* === Effects Off Toggle === */
+
+body.effects-off .app-backdrop { background: var(--bg-base); }
+body.effects-off .noise-overlay { display: none; }
+body.effects-off .cursor-spotlight { display: none; }
+body.effects-off .particle-canvas { display: none; }
+body.effects-off .content-panel { backdrop-filter: none; -webkit-backdrop-filter: none; }
+body.effects-off .content-panel pre { box-shadow: none; }
+body.effects-off .content-panel pre:hover { transform: none; }
+body.effects-off .content-panel:has(pre:hover) > * { opacity: 1; }
+body.effects-off .content-panel h1,
+body.effects-off .content-panel h2,
+body.effects-off .content-panel h3 {
+  background: none;
+  -webkit-background-clip: unset;
+  -webkit-text-fill-color: unset;
+  background-clip: unset;
+}
+body.effects-off .content-panel h2 { box-shadow: none; }
+body.effects-off .content-panel hr { animation: none; box-shadow: none; }
+body.effects-off .content-panel img:hover { transform: none; }
+body.effects-off .fade-up { opacity: 1; transform: none; }

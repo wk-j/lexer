@@ -5,8 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lexer</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="effects.css">
 </head>
 <body>
+  <!-- Background layers (z-index 0-1) -->
+  <canvas class="particle-canvas" id="particle-canvas"></canvas>
+  <div class="app-backdrop"></div>
+  <div class="noise-overlay"></div>
+  <div class="cursor-spotlight"></div>
+
+  <!-- App (z-index 2+) -->
   <div class="app">
     <div class="content-panel" id="content">
       <div class="empty-state">
@@ -48,5 +56,7 @@
   <script src="app.js"></script>
   <script src="keyboard.js"></script>
   <script src="palette.js"></script>
+  <script src="effects.js"></script>
+  <script src="particles.js"></script>
 </body>
 </html>

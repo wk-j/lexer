@@ -183,59 +183,66 @@
 ## Phase 5: Visual Effects
 
 ### 5.1 Background & Atmosphere (`src/effects.css`)
-- [ ] Frosted glass panels (`backdrop-filter`)
-- [ ] Gradient mesh backdrop
-- [ ] Noise texture overlay (SVG data URI)
-- [ ] Ambient glow on code blocks and blockquotes
+- [x] Frosted glass panels (`backdrop-filter: blur() saturate()`)
+- [x] Gradient mesh backdrop (3 radial gradients, themed colors)
+- [x] Noise texture overlay (SVG data URI, `mix-blend-mode: overlay`)
+- [x] Ambient glow on code blocks (`box-shadow` with `--glow-color`)
 
 ### 5.2 Element Effects
-- [ ] Code blocks: inner shadow, ambient glow
-- [ ] Blockquotes: left border gradient, frosted bg
-- [ ] Headings: text gradient fill
-- [ ] Links: underline slide-in hover animation
-- [ ] Tables: header blur backdrop
-- [ ] Horizontal rules: gradient fade with glow pulse
-- [ ] Images: drop shadow, zoom-on-hover
+- [x] Code blocks: inner shadow, ambient glow, hover glow/scale
+- [x] Blockquotes: left border gradient, frosted bg
+- [x] Headings: gradient text fill (`background-clip: text`), h2 section divider glow
+- [x] Links: underline slide-in hover animation (pseudo-element)
+- [x] Tables: header blur backdrop
+- [x] Horizontal rules: gradient fade with glow pulse animation
+- [x] Images: drop shadow, zoom-on-hover, rounded corners
 
 ### 5.3 Transitions & Animations
-- [ ] Theme switch cross-fade (300ms)
-- [ ] Content reload fade-out/fade-in (200ms)
-- [ ] Scroll-into-view fade-up (`IntersectionObserver`)
-- [ ] Code block hover glow/scale
-- [ ] ToC sidebar slide-in/out
-- [ ] Image progressive fade-in
+- [x] Theme switch cross-fade (300ms on CSS variables)
+- [x] Content reload fade-out/fade-in (`.reloading` class)
+- [x] Scroll-into-view fade-up (`IntersectionObserver` + `.fade-up.visible`)
+- [x] Code block hover glow/scale (150ms)
+- [ ] ToC sidebar slide-in/out — deferred to Phase 8 (layouts)
+- [x] Image zoom-on-hover transition
 
-### 5.4 Canvas Particle Effects
-- [ ] Canvas layer behind content (GPU-composited)
-- [ ] Presets: `floating_dots`, `constellation`, `aurora`, `fireflies`, `rain`, `none`
-- [ ] Capped at 30fps, auto-pause after 30s idle
+### 5.4 Canvas Particle Effects (`src/particles.js`)
+- [x] Canvas layer behind content (GPU-composited, DPR-aware)
+- [x] 6 presets: `floating_dots`, `constellation`, `aurora`, `fireflies`, `rain`, `none`
+- [x] 30fps cap via `requestAnimationFrame` + interval gating
+- [x] Auto-pause after 30s idle, resume on scroll/mouse
+- [x] Pause when tab hidden (`visibilitychange`)
+- [x] Auto-reduce particle count based on viewport size
 
 ### 5.5 Parallax & Depth
-- [ ] 5 scroll-rate layers (canvas 0.1x -> content 1.0x -> UI sticky)
+- [x] Background layers at z-index 0-1 (canvas, gradient, noise, spotlight)
+- [x] Content at z-index 2, UI overlays above
+- [ ] Scroll-driven parallax transforms (deferred — needs scroll variable piping)
 
 ### 5.6 Cursor-Reactive Effects
-- [ ] Spotlight glow following cursor
-- [ ] Code block proximity brightening
-- [ ] Ripple on click
+- [x] Spotlight glow following cursor (`--cursor-x/--cursor-y` + radial gradient)
+- [x] Ripple on click (expanding CSS ring, auto-removes)
+- [ ] Code block proximity brightening — deferred
+- [ ] Magnetic headings — deferred
 
 ### 5.7 Advanced Code Block Effects
-- [ ] Line highlight on hover
-- [ ] Optional line numbers gutter
-- [ ] Copy button with glow feedback
-- [ ] Scroll shadow at edges
-- [ ] Focus dim (dim rest of page on hover)
+- [x] Copy button with glow feedback (injected on render, `.copied` state)
+- [x] Scroll shadow at edges (CSS `background-attachment: local`)
+- [x] Focus dim (`:has(pre:hover)` dims siblings)
+- [ ] Line highlight on hover — needs per-line `<span>` wrapping in parser
+- [ ] Optional line numbers gutter — needs parser changes
 
 ### 5.8 Image & Media Effects
-- [ ] Lazy fade-in on load
-- [ ] 3D tilt on hover
-- [ ] Lightbox (click to expand)
-- [ ] Caption slide-up from alt text
+- [x] 3D tilt on hover (perspective + rotateX/Y following cursor)
+- [x] Lightbox (click to expand, blurred backdrop, Escape closes)
+- [ ] Caption slide-up from alt text — needs `<img>` wrapper in parser
+- [ ] Lazy fade-in on load — deferred
 
 ### 5.9 Performance & Accessibility
-- [ ] `prefers-reduced-motion: reduce` support
-- [ ] Max 80 particles, auto-reduce on low-end
-- [ ] All scroll handlers in `requestAnimationFrame`
-- [ ] Effect toggles (per-effect on/off)
+- [x] `prefers-reduced-motion: reduce` (disables all animations, hides canvas/spotlight)
+- [x] Max 80 particles, auto-reduce based on viewport
+- [x] Scroll/mouse handlers with `{ passive: true }`
+- [x] `.effects-off` body class kills all visual effects
+- [x] MutationObserver re-applies effects on content change
 
 ---
 
@@ -348,4 +355,6 @@
 | `cb4acf3` | Implement working MVP (Tauri v2, markdown, tree-sitter, dark theme, file open) |
 | `5408dd5` | Fix Tauri v2 IPC: enable `withGlobalTauri`, plugin invoke syntax |
 | `4acbcbe` | Add implementation progress tracker |
-| | Add file watcher, Helix keyboard, command palette (Phases 2-4) |
+| `7b3eaa6` | Add file watcher, Helix keyboard, command palette (Phases 2-4) |
+| `9a5d85c` | Fix duplicate variable errors, palette Ctrl+N/P navigation |
+| | Add visual effects system (Phase 5) |
