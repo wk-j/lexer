@@ -207,7 +207,19 @@ class KeyboardEngine {
       return;
     }
 
-    // Ignore keys with Ctrl/Cmd (let browser/Tauri handle those)
+    // Ctrl+O / Ctrl+I: previous / next buffer (Helix-style jumplist)
+    if (e.ctrlKey && !e.metaKey && e.key === 'o') {
+      e.preventDefault();
+      window.lexerApp?.prevBuffer();
+      return;
+    }
+    if (e.ctrlKey && !e.metaKey && e.key === 'i') {
+      e.preventDefault();
+      window.lexerApp?.nextBuffer();
+      return;
+    }
+
+    // Ignore other keys with Ctrl/Cmd (let browser/Tauri handle those)
     if (e.ctrlKey || e.metaKey) return;
 
     const key = this._normalizeKey(e);

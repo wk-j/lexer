@@ -263,8 +263,8 @@ async function openFileDialog() {
 // --- Keyboard Shortcuts ---
 
 document.addEventListener('keydown', (e) => {
-  // Ctrl+O / Cmd+O: open file
-  if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
+  // Cmd+O: open file (macOS only — Ctrl+O is reserved for prev buffer)
+  if (e.metaKey && !e.ctrlKey && e.key === 'o') {
     e.preventDefault();
     openFileDialog();
   }
