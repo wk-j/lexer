@@ -577,11 +577,25 @@ class KeyboardEngine {
 
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (this.searchMatches.length > 0) {
+      // Confirm search — jump to first match if not already there
+      if (this.searchMatches.length > 0 && this.searchIndex < 0) {
         this.searchIndex = 0;
-        this._highlightCurrentMatch();
+        this.searchMatches[0].classList.add('current');
+        this.searchMatches[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
       this.setMode('normal');
+      return;
+    }
+
+    // n/N to navigate matches while still in search mode
+    if (e.key === 'n' && e.ctrlKey) {
+      e.preventDefault();
+      this._searchNext(1);
+      return;
+    }
+    if (e.key === 'p' && e.ctrlKey) {
+      e.preventDefault();
+      this._searchNext(-1);
       return;
     }
 
@@ -656,13 +670,22 @@ class KeyboardEngine {
       matches[0].classList.add('current');
       matches[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+
+    this._updateSearchCount();
   }
 
   _searchNext(direction) {
     if (this.searchMatches.length === 0) return;
 
+    // Verify matches are still in the DOM (content may have been re-rendered)
+    if (!this.searchMatches[0].isConnected) {
+      this.searchMatches = [];
+      this.searchIndex = -1;
+      return;
+    }
+
     // Remove current highlight
-    if (this.searchIndex >= 0) {
+    if (this.searchIndex >= 0 && this.searchIndex < this.searchMatches.length) {
       this.searchMatches[this.searchIndex].classList.remove('current');
     }
 
@@ -672,6 +695,15 @@ class KeyboardEngine {
 
     this.searchMatches[this.searchIndex].classList.add('current');
     this.searchMatches[this.searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Update status bar with match position
+    this._updateSearchCount();
+  }
+
+  _updateSearchCount() {
+    if (this.searchMatches.length > 0 && this.pendingEl) {
+      this.pendingEl.textContent = `[${this.searchIndex + 1}/${this.searchMatches.length}]`;
+    }
   }
 
   _clearSearchHighlights() {
@@ -685,6 +717,7 @@ class KeyboardEngine {
     this.contentEl.normalize();
     this.searchMatches = [];
     this.searchIndex = -1;
+    if (this.pendingEl) this.pendingEl.textContent = '';
   }
 
   // --- Helpers ---
