@@ -98,6 +98,7 @@ body {
   margin: 0 auto;
   width: 100%;
   position: relative;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* === Status Bar === */

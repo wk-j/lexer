@@ -29,10 +29,10 @@ class KeyboardEngine {
   _bindKeymaps() {
     this.keymaps = {
       normal: {
-        'j':      { fn: () => this._scroll(60) },
-        'k':      { fn: () => this._scroll(-60) },
-        'ArrowDown': { fn: () => this._scroll(60) },
-        'ArrowUp':   { fn: () => this._scroll(-60) },
+        'j':      { fn: () => this._scroll(120) },
+        'k':      { fn: () => this._scroll(-120) },
+        'ArrowDown': { fn: () => this._scroll(120) },
+        'ArrowUp':   { fn: () => this._scroll(-120) },
         'd':      { fn: () => this._scroll(this.contentEl.clientHeight / 2) },
         'u':      { fn: () => this._scroll(-this.contentEl.clientHeight / 2) },
         'f':      { fn: () => this._scroll(this.contentEl.clientHeight) },
@@ -301,11 +301,43 @@ class KeyboardEngine {
   // --- Scroll Actions ---
 
   _scroll(px) {
-    this.contentEl.scrollBy({ top: px, behavior: 'auto' });
+    this._animateScroll(this.contentEl.scrollTop + px, 100);
   }
 
   _scrollTo(y) {
-    this.contentEl.scrollTo({ top: y, behavior: 'smooth' });
+    this._animateScroll(y, 300);
+  }
+
+  // Eased scroll animation using requestAnimationFrame
+  _animateScroll(target, duration) {
+    const el = this.contentEl;
+    const start = el.scrollTop;
+    const maxScroll = el.scrollHeight - el.clientHeight;
+    const dest = Math.max(0, Math.min(target, maxScroll));
+    const distance = dest - start;
+
+    if (Math.abs(distance) < 1) return;
+
+    // Cancel any ongoing scroll animation
+    if (this._scrollRaf) cancelAnimationFrame(this._scrollRaf);
+
+    const startTime = performance.now();
+
+    const step = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease-out cubic: 1 - (1 - t)^3
+      const ease = 1 - Math.pow(1 - progress, 3);
+      el.scrollTop = start + distance * ease;
+
+      if (progress < 1) {
+        this._scrollRaf = requestAnimationFrame(step);
+      } else {
+        this._scrollRaf = null;
+      }
+    };
+
+    this._scrollRaf = requestAnimationFrame(step);
   }
 
   // --- Heading Navigation ---
