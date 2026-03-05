@@ -1,0 +1,63 @@
+# Markdown Parsing
+
+## Parser
+
+Use `pulldown-cmark` with the following extensions enabled:
+
+- **Tables** (GFM)
+- **Strikethrough** (GFM)
+- **Task lists** (GFM)
+- **Footnotes**
+- **Heading attributes**
+
+## Supported Markdown Features
+
+| Feature               | Support Level |
+| --------------------- | ------------- |
+| Headings (h1-h6)      | Full          |
+| Paragraphs            | Full          |
+| Bold / Italic / Code  | Full          |
+| Links                 | Full          |
+| Images                | Full (local + remote) |
+| Blockquotes           | Full          |
+| Ordered / Unordered lists | Full      |
+| Task lists            | Full          |
+| Tables                | Full          |
+| Fenced code blocks    | Full + Tree-sitter highlighting |
+| Inline code           | Full          |
+| Horizontal rules      | Full          |
+| Footnotes             | Full          |
+| Strikethrough         | Full          |
+| Math (LaTeX)          | Future        |
+
+## HTML Generation
+
+The parser converts Markdown events to an HTML string. Fenced code blocks are intercepted and routed through the Tree-sitter highlighter before being embedded as `<pre><code>` blocks with syntax spans.
+
+```rust
+// Pseudocode for the rendering pipeline
+fn render_markdown(source: &str) -> String {
+    let parser = pulldown_cmark::Parser::new_ext(source, options);
+    let mut html = String::new();
+
+    for event in parser {
+        match event {
+            Event::Start(Tag::CodeBlock(kind)) => {
+                let lang = extract_language(&kind);
+                // buffer code content for tree-sitter
+            }
+            Event::Text(text) if in_code_block => {
+                code_buffer.push_str(&text);
+            }
+            Event::End(Tag::CodeBlock(_)) => {
+                let highlighted = tree_sitter_highlight(&code_buffer, &lang);
+                html.push_str(&highlighted);
+            }
+            _ => {
+                // default pulldown-cmark HTML rendering
+            }
+        }
+    }
+    html
+}
+```
