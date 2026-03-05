@@ -1,6 +1,5 @@
 // Lexer - Helix-Style Keyboard Navigation Engine
-
-const { invoke } = window.__TAURI__.core;
+// Uses `invoke` and `listen` from app.js (loaded first)
 
 class KeyboardEngine {
   constructor() {

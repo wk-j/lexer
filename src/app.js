@@ -26,15 +26,21 @@ async function openFile(path) {
 async function openFileDialog() {
   try {
     // Tauri v2 plugin command for file open dialog
-    const selected = await invoke('plugin:dialog|open', {
+    const result = await invoke('plugin:dialog|open', {
       options: {
         multiple: false,
         filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'mkd', 'mdx'] }],
       },
     });
-    if (selected) {
-      // selected is a path string (or null if cancelled)
-      await openFile(selected);
+    console.log('dialog result:', JSON.stringify(result));
+    // Result may be a string path, an object with path property, or an array
+    const path = typeof result === 'string' ? result
+      : (result && typeof result === 'object' && result.path) ? result.path
+      : Array.isArray(result) ? result[0]
+      : null;
+    if (path) {
+      const filePath = typeof path === 'string' ? path : path.path || String(path);
+      await openFile(filePath);
     }
   } catch (err) {
     console.error('Failed to open dialog:', err);

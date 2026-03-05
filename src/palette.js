@@ -1,6 +1,5 @@
 // Lexer - Command Palette
-
-const { invoke } = window.__TAURI__.core;
+// Uses `invoke` from app.js (loaded first)
 
 class CommandPalette {
   constructor() {
@@ -71,12 +70,12 @@ class CommandPalette {
         this.close();
         return;
       }
-      if (e.key === 'ArrowDown') {
+      if (e.key === 'ArrowDown' || (e.ctrlKey && e.key === 'n')) {
         e.preventDefault();
         this._select(this.selectedIndex + 1);
         return;
       }
-      if (e.key === 'ArrowUp') {
+      if (e.key === 'ArrowUp' || (e.ctrlKey && e.key === 'p')) {
         e.preventDefault();
         this._select(this.selectedIndex - 1);
         return;
@@ -105,9 +104,9 @@ class CommandPalette {
       this.open(e.detail.prefix);
     });
 
-    // Ctrl+P / Cmd+P opens file palette
+    // Cmd+P opens file palette (macOS: metaKey only, no ctrlKey to avoid conflict with Ctrl+P navigation)
     document.addEventListener('keydown', (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+      if (e.metaKey && !e.ctrlKey && e.key === 'p') {
         e.preventDefault();
         if (this.visible) {
           this.close();
