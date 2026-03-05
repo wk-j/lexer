@@ -1,0 +1,64 @@
+[meta]
+name = "Lexer Nord"
+author = "Lexer"
+base = "dark"
+version = "1.0.0"
+
+[colors]
+bg_base = "transparent"
+bg_base_opaque = "#2e3440"
+bg_panel = "rgba(46, 52, 64, 0.55)"
+bg_panel_border = "rgba(216, 222, 233, 0.08)"
+text_primary = "#d8dee9"
+text_secondary = "#81a1c1"
+text_muted = "#4c566a"
+accent = "#88c0d0"
+link = "#88c0d0"
+link_hover = "#8fbcbb"
+gradient_a = "rgba(136, 192, 208, 0.06)"
+gradient_b = "rgba(180, 142, 173, 0.05)"
+gradient_c = "rgba(163, 190, 140, 0.04)"
+code_bg = "rgba(59, 66, 82, 0.5)"
+code_border = "rgba(216, 222, 233, 0.06)"
+glow_color = "rgba(136, 192, 208, 0.15)"
+glow_radius = "18px"
+blockquote_border = "#88c0d0"
+blockquote_bg = "rgba(136, 192, 208, 0.06)"
+hr_color = "rgba(76, 86, 106, 0.5)"
+table_header_bg = "rgba(59, 66, 82, 0.5)"
+table_border = "rgba(76, 86, 106, 0.4)"
+table_row_alt = "rgba(59, 66, 82, 0.25)"
+spotlight_color = "rgba(216, 222, 233, 0.015)"
+heading_gradient = "linear-gradient(135deg, #88c0d0, #d8dee9)"
+
+[syntax]
+keyword = "#81a1c1"
+string = "#a3be8c"
+comment = "#616e88"
+function = "#88c0d0"
+type = "#8fbcbb"
+number = "#b48ead"
+operator = "#81a1c1"
+variable = "#d08770"
+punctuation = "#eceff4"
+constant = "#8fbcbb"
+tag = "#81a1c1"
+attribute = "#8fbcbb"
+property = "#88c0d0"
+constructor = "#d08770"
+embedded = "#d8dee9"
+
+[typography]
+font_size = 16
+line_height = 1.7
+code_font_size = 14
+
+[effects]
+frosted_glass = true
+frosted_blur = "20px"
+frosted_saturate = "160%"
+gradient_backdrop = true
+noise_texture = true
+noise_opacity = 0.03
+scroll_animations = true
+heading_gradient_text = true

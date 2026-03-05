@@ -356,6 +356,45 @@ contentEl.addEventListener('click', (e) => {
   }
 });
 
+// --- Theme Management ---
+
+let themeStyleEl = null;
+
+function applyThemeCss(css) {
+  if (!themeStyleEl) {
+    themeStyleEl = document.createElement('style');
+    themeStyleEl.id = 'lexer-theme';
+    document.head.appendChild(themeStyleEl);
+  }
+  themeStyleEl.textContent = css;
+}
+
+async function loadTheme(name) {
+  try {
+    const result = await invoke('load_theme', { name });
+    applyThemeCss(result.css);
+    return result;
+  } catch (err) {
+    console.error('Failed to load theme:', err);
+    return null;
+  }
+}
+
+// Load initial theme on startup
+(async () => {
+  try {
+    const active = await invoke('get_active_theme');
+    await loadTheme(active);
+  } catch (_) {
+    // Default theme CSS is already in style.css as fallback
+  }
+})();
+
+// Theme hot-reload from backend
+listen('theme-updated', (event) => {
+  applyThemeCss(event.payload);
+});
+
 // --- Expose for other modules ---
 window.lexerApp = {
   openFile,
@@ -365,5 +404,6 @@ window.lexerApp = {
   nextBuffer,
   prevBuffer,
   closeOtherBuffers,
+  loadTheme,
   get currentBufferId() { return currentBufferId; },
 };

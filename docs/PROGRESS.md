@@ -309,27 +309,38 @@
 ## Phase 7: Custom Theme System
 
 ### 7.1 Theme Engine (`src-tauri/src/theme/`)
-- [ ] `Theme` struct parsed from TOML
-- [ ] `to_css()` method generating `:root` custom properties
-- [ ] Theme file discovery (user dir, env var, built-in)
-- [ ] Merge with base defaults, validation
+- [x] `ThemeFile` struct deserialized from TOML (meta, colors, syntax, typography, effects)
+- [x] `compile_css()` generates `:root` custom properties block
+- [x] Theme file discovery: user dir (`~/.config/lexer/themes/`), `$LEXER_THEMES_DIR`, built-in
+- [x] Merge with base defaults (dark/light), unknown syntax tokens passed through
+- [x] Effect toggles compiled to body/class CSS rules
 
 ### 7.2 Built-in Themes (`src-tauri/themes/`)
-- [ ] `lexer-dark.toml`
-- [ ] `lexer-light.toml`
-- [ ] `lexer-mono.toml`
-- [ ] `lexer-solarized.toml`
-- [ ] `lexer-nord.toml`
+- [x] `lexer-dark.toml` — default, deep navy with frosted glass
+- [x] `lexer-light.toml` — clean white, soft shadows, GitHub-style syntax
+- [x] `lexer-mono.toml` — monochrome grayscale, no color accents
+- [x] `lexer-solarized.toml` — Solarized dark palette
+- [x] `lexer-nord.toml` — Nord color palette
 
 ### 7.3 Tauri Commands
-- [ ] `list_themes`
-- [ ] `load_theme` (resolve, parse, return CSS)
-- [ ] `get_theme` / `set_theme`
-- [ ] `get_theme_config` (full parsed theme for preview)
+- [x] `list_themes` — scan built-in + user directories, return ThemeInfo
+- [x] `load_theme(name)` — resolve, parse, merge defaults, compile CSS, set as active
+- [x] `get_active_theme` — return current active theme name
+- [ ] `get_theme_config` (full parsed theme for preview) — deferred
 
 ### 7.4 Theme Hot-Reload
-- [ ] Watch `~/.config/lexer/themes/` directory
-- [ ] Auto-recompile + emit `theme-updated` event on change
+- [x] Watch `~/.config/lexer/themes/` directory via FileWatcher
+- [x] Auto-recompile + emit `theme-updated` event on change (only for active theme)
+- [x] Creates user themes directory if it doesn't exist
+
+### 7.5 Frontend Integration
+- [x] `applyThemeCss()` injects `<style id="lexer-theme">` with compiled CSS variables
+- [x] `loadTheme(name)` invokes backend, applies CSS
+- [x] Initial theme loaded on startup via `get_active_theme` + `load_theme`
+- [x] `theme-updated` event listener for hot-reload
+- [x] Palette `@` mode: real data from `list_themes`, active theme indicator
+- [x] Palette theme execution: calls `loadTheme()` on selection
+- [x] Command palette: "theme" command opens theme picker
 
 ---
 
@@ -419,4 +430,6 @@
 | `59a1a16` | Add visual effects system (Phase 5) |
 | `f41b988` | Transparent titlebar and remove h2 glow box |
 | `4b879e3` | Improve scroll: custom eased animation for j/k navigation |
-| | Phase 6: Buffer/tab support + transparent vibrancy window (pending commit) |
+| `db224ef` | Phase 6: Buffer/tab support + transparent vibrancy window |
+| `d5dcc7a` | Fix search navigation: remove undefined method call, add match counter |
+| | Phase 7: Custom theme system (pending commit) |

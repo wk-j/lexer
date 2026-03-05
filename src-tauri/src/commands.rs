@@ -9,6 +9,7 @@ use crate::fs::FileWatcher;
 use crate::highlight::LanguageRegistry;
 use crate::markdown::{render_markdown, TocEntry};
 use crate::state::{AppState, BufferState};
+use crate::theme::{ThemeEngine, ThemeInfo};
 
 // --- Response types ---
 
@@ -502,4 +503,42 @@ pub fn scan_directory(path: String) -> Result<Vec<FileEntry>, String> {
     }
     entries.sort_by(|a, b| b.modified.cmp(&a.modified));
     Ok(entries)
+}
+
+// --- Theme commands ---
+
+#[tauri::command]
+pub fn list_themes(
+    theme_engine: State<'_, Arc<Mutex<ThemeEngine>>>,
+) -> Result<Vec<ThemeInfo>, String> {
+    let engine = theme_engine.lock().map_err(|e| e.to_string())?;
+    Ok(engine.list_themes())
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ThemeResult {
+    pub name: String,
+    pub css: String,
+}
+
+#[tauri::command]
+pub fn load_theme(
+    name: String,
+    theme_engine: State<'_, Arc<Mutex<ThemeEngine>>>,
+) -> Result<ThemeResult, String> {
+    let mut engine = theme_engine.lock().map_err(|e| e.to_string())?;
+    let theme = engine.load_theme(&name)?;
+    engine.active_theme = name;
+    Ok(ThemeResult {
+        name: theme.meta.name,
+        css: theme.css,
+    })
+}
+
+#[tauri::command]
+pub fn get_active_theme(
+    theme_engine: State<'_, Arc<Mutex<ThemeEngine>>>,
+) -> Result<String, String> {
+    let engine = theme_engine.lock().map_err(|e| e.to_string())?;
+    Ok(engine.active_theme.clone())
 }

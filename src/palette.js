@@ -141,7 +141,7 @@ class CommandPalette {
         await this._loadHeadings();
         break;
       case 'theme':
-        this._loadThemes();
+        await this._loadThemes();
         break;
       case 'recent':
         this._loadRecent();
@@ -196,6 +196,7 @@ class CommandPalette {
       { label: 'open', detail: 'Open file dialog', value: 'open-file', type: 'command' },
       { label: 'reload', detail: 'Force re-render current file', value: 'reload', type: 'command' },
       { label: 'copy path', detail: 'Copy file path to clipboard', value: 'copy-path', type: 'command' },
+      { label: 'theme', detail: 'Open theme picker', value: 'theme-picker', type: 'command' },
     ];
   }
 
@@ -213,12 +214,23 @@ class CommandPalette {
     }
   }
 
-  _loadThemes() {
-    // Placeholder — will be populated when theme engine is implemented
-    this.items = [
-      { label: 'lexer-dark', detail: 'Default dark theme', value: 'lexer-dark', type: 'theme' },
-      { label: 'lexer-light', detail: 'Light theme', value: 'lexer-light', type: 'theme' },
-    ];
+  async _loadThemes() {
+    try {
+      const themes = await invoke('list_themes');
+      const active = await invoke('get_active_theme');
+      this.items = themes.map(t => ({
+        label: (t.file_name === active ? '● ' : '  ') + t.name,
+        detail: `${t.base} · ${t.author || 'built-in'}`,
+        value: t.file_name,
+        type: 'theme',
+      }));
+    } catch (err) {
+      console.error('list_themes failed:', err);
+      this.items = [
+        { label: 'lexer-dark', detail: 'Default dark theme', value: 'lexer-dark', type: 'theme' },
+        { label: 'lexer-light', detail: 'Light theme', value: 'lexer-light', type: 'theme' },
+      ];
+    }
   }
 
   _loadRecent() {
@@ -374,7 +386,9 @@ class CommandPalette {
         break;
 
       case 'theme':
-        // Will be implemented with theme engine
+        if (window.lexerApp) {
+          window.lexerApp.loadTheme(item.value);
+        }
         break;
 
       case 'buffer':
@@ -418,6 +432,10 @@ class CommandPalette {
         invoke('get_current_file').then(path => {
           if (path) navigator.clipboard.writeText(path).catch(() => {});
         });
+        break;
+      case 'theme-picker':
+        // Re-open palette in theme mode
+        setTimeout(() => this.open('@'), 50);
         break;
     }
   }

@@ -1,0 +1,64 @@
+[meta]
+name = "Lexer Solarized"
+author = "Lexer"
+base = "dark"
+version = "1.0.0"
+
+[colors]
+bg_base = "transparent"
+bg_base_opaque = "#002b36"
+bg_panel = "rgba(0, 43, 54, 0.55)"
+bg_panel_border = "rgba(147, 161, 161, 0.12)"
+text_primary = "#839496"
+text_secondary = "#657b83"
+text_muted = "#586e75"
+accent = "#268bd2"
+link = "#268bd2"
+link_hover = "#2aa198"
+gradient_a = "rgba(38, 139, 210, 0.08)"
+gradient_b = "rgba(211, 54, 130, 0.05)"
+gradient_c = "rgba(133, 153, 0, 0.04)"
+code_bg = "rgba(7, 54, 66, 0.55)"
+code_border = "rgba(147, 161, 161, 0.08)"
+glow_color = "rgba(38, 139, 210, 0.15)"
+glow_radius = "18px"
+blockquote_border = "#268bd2"
+blockquote_bg = "rgba(38, 139, 210, 0.06)"
+hr_color = "rgba(88, 110, 117, 0.5)"
+table_header_bg = "rgba(7, 54, 66, 0.6)"
+table_border = "rgba(147, 161, 161, 0.12)"
+table_row_alt = "rgba(7, 54, 66, 0.3)"
+spotlight_color = "rgba(147, 161, 161, 0.02)"
+heading_gradient = "linear-gradient(135deg, #268bd2, #839496)"
+
+[syntax]
+keyword = "#859900"
+string = "#2aa198"
+comment = "#586e75"
+function = "#268bd2"
+type = "#b58900"
+number = "#d33682"
+operator = "#657b83"
+variable = "#cb4b16"
+punctuation = "#657b83"
+constant = "#2aa198"
+tag = "#268bd2"
+attribute = "#b58900"
+property = "#b58900"
+constructor = "#cb4b16"
+embedded = "#839496"
+
+[typography]
+font_size = 16
+line_height = 1.7
+code_font_size = 14
+
+[effects]
+frosted_glass = true
+frosted_blur = "18px"
+frosted_saturate = "160%"
+gradient_backdrop = true
+noise_texture = true
+noise_opacity = 0.03
+scroll_animations = true
+heading_gradient_text = true

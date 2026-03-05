@@ -1,0 +1,64 @@
+[meta]
+name = "Lexer Mono"
+author = "Lexer"
+base = "dark"
+version = "1.0.0"
+
+[colors]
+bg_base = "transparent"
+bg_base_opaque = "#0a0a0a"
+bg_panel = "rgba(18, 18, 18, 0.55)"
+bg_panel_border = "rgba(255, 255, 255, 0.06)"
+text_primary = "#d4d4d4"
+text_secondary = "#808080"
+text_muted = "#555555"
+accent = "#a0a0a0"
+link = "#b0b0b0"
+link_hover = "#d4d4d4"
+gradient_a = "rgba(255, 255, 255, 0.03)"
+gradient_b = "rgba(255, 255, 255, 0.02)"
+gradient_c = "rgba(255, 255, 255, 0.01)"
+code_bg = "rgba(18, 18, 18, 0.5)"
+code_border = "rgba(255, 255, 255, 0.06)"
+glow_color = "rgba(255, 255, 255, 0.08)"
+glow_radius = "16px"
+blockquote_border = "#707070"
+blockquote_bg = "rgba(255, 255, 255, 0.03)"
+hr_color = "rgba(80, 80, 80, 0.5)"
+table_header_bg = "rgba(255, 255, 255, 0.05)"
+table_border = "rgba(255, 255, 255, 0.08)"
+table_row_alt = "rgba(255, 255, 255, 0.02)"
+spotlight_color = "rgba(255, 255, 255, 0.015)"
+heading_gradient = "linear-gradient(135deg, #d4d4d4, #808080)"
+
+[syntax]
+keyword = "#c0c0c0"
+string = "#a8a8a8"
+comment = "#606060"
+function = "#d4d4d4"
+type = "#b0b0b0"
+number = "#b0b0b0"
+operator = "#909090"
+variable = "#c8c8c8"
+punctuation = "#707070"
+constant = "#b0b0b0"
+tag = "#c0c0c0"
+attribute = "#a0a0a0"
+property = "#a0a0a0"
+constructor = "#c8c8c8"
+embedded = "#d4d4d4"
+
+[typography]
+font_size = 16
+line_height = 1.7
+code_font_size = 14
+
+[effects]
+frosted_glass = true
+frosted_blur = "20px"
+frosted_saturate = "100%"
+gradient_backdrop = false
+noise_texture = true
+noise_opacity = 0.04
+scroll_animations = true
+heading_gradient_text = true

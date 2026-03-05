@@ -1,0 +1,64 @@
+[meta]
+name = "Lexer Light"
+author = "Lexer"
+base = "light"
+version = "1.0.0"
+
+[colors]
+bg_base = "transparent"
+bg_base_opaque = "#ffffff"
+bg_panel = "rgba(255, 255, 255, 0.65)"
+bg_panel_border = "rgba(0, 0, 0, 0.08)"
+text_primary = "#24292f"
+text_secondary = "#57606a"
+text_muted = "#8b949e"
+accent = "#0969da"
+link = "#0969da"
+link_hover = "#0550ae"
+gradient_a = "rgba(9, 105, 218, 0.06)"
+gradient_b = "rgba(130, 80, 223, 0.05)"
+gradient_c = "rgba(26, 127, 55, 0.04)"
+code_bg = "rgba(246, 248, 250, 0.7)"
+code_border = "rgba(0, 0, 0, 0.08)"
+glow_color = "rgba(9, 105, 218, 0.12)"
+glow_radius = "16px"
+blockquote_border = "#0969da"
+blockquote_bg = "rgba(9, 105, 218, 0.06)"
+hr_color = "rgba(208, 215, 222, 0.6)"
+table_header_bg = "rgba(246, 248, 250, 0.8)"
+table_border = "rgba(208, 215, 222, 0.6)"
+table_row_alt = "rgba(246, 248, 250, 0.5)"
+spotlight_color = "rgba(0, 0, 0, 0.015)"
+heading_gradient = "linear-gradient(135deg, var(--accent), #24292f)"
+
+[syntax]
+keyword = "#cf222e"
+string = "#0a3069"
+comment = "#6e7781"
+function = "#8250df"
+type = "#0550ae"
+number = "#0550ae"
+operator = "#0550ae"
+variable = "#953800"
+punctuation = "#6e7781"
+constant = "#0550ae"
+tag = "#116329"
+attribute = "#0550ae"
+property = "#0550ae"
+constructor = "#953800"
+embedded = "#24292f"
+
+[typography]
+font_size = 16
+line_height = 1.7
+code_font_size = 14
+
+[effects]
+frosted_glass = true
+frosted_blur = "16px"
+frosted_saturate = "150%"
+gradient_backdrop = true
+noise_texture = true
+noise_opacity = 0.02
+scroll_animations = true
+heading_gradient_text = true
