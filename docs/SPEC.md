@@ -23,6 +23,7 @@
 | 15 | [Future Enhancements](15-future.md) | Roadmap items not yet in scope |
 | 16 | [Block Select](16-block-select.md) | Structural block selection, copy as Markdown, AI agent integration |
 | 17 | [OpenCode Integration](17-opencode.md) | Auto-discover OpenCode, send selections as prompts via HTTP |
+| 18 | [Custom Commands](18-custom-commands.md) | User-defined shell commands with placeholder variables |
 
 ## Implementation Tracking
 

@@ -77,3 +77,24 @@ Settings are resolved in this order (first wins):
 | Windows  | `%APPDATA%\lexer\config.toml` |
 
 The config file is optional. If not found, all defaults are used. Invalid TOML is warned via tracing but doesn't prevent startup.
+
+## Custom Commands
+
+User-defined shell commands can be added to the config file. They appear in the command palette and support placeholder variables like `{file}`, `{file_absolute}`, `{dir}`, `{cwd}`, and `{selection}`.
+
+```toml
+[[commands]]
+name = "Open in GitHub"
+command = "gh browse {file}"
+
+[[commands]]
+name = "Open in VS Code"
+command = "code {file_absolute}"
+
+[[commands]]
+name = "Copy GitHub URL"
+command = "gh browse {file} --no-browser"
+output = "clipboard"
+```
+
+See [18-custom-commands.md](18-custom-commands.md) for the full specification, all placeholder variables, and more examples.

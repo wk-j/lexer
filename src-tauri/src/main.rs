@@ -247,9 +247,21 @@ fn main() {
                         }),
                     );
 
-                    // Open files passed via CLI
-                    for file_path in &files {
-                        let _ = handle.emit("open-file-arg", file_path.clone());
+                    // Open files passed via CLI, or README.md as default
+                    if files.is_empty() {
+                        if let Ok(cwd) = std::env::current_dir() {
+                            let readme = cwd.join("README.md");
+                            if readme.exists() {
+                                let _ = handle.emit(
+                                    "open-file-arg",
+                                    readme.to_string_lossy().into_owned(),
+                                );
+                            }
+                        }
+                    } else {
+                        for file_path in &files {
+                            let _ = handle.emit("open-file-arg", file_path.clone());
+                        }
                     }
                 });
             }
