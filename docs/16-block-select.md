@@ -307,7 +307,7 @@ The most powerful use of Block Select: sending selected content as context to an
 
 The `c` action wraps the selected Markdown in a structured context block optimized for AI consumption:
 
-```xml
+````xml
 <context source="path/to/file.md" blocks="3-7">
 ## Architecture
 
@@ -322,7 +322,7 @@ fn main() {
 
 Each layer communicates through message passing.
 </context>
-```
+````
 
 This format:
 - Identifies the source file
