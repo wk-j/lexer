@@ -30,6 +30,10 @@ table_border = "rgba(76, 86, 106, 0.4)"
 table_row_alt = "rgba(59, 66, 82, 0.25)"
 spotlight_color = "rgba(216, 222, 233, 0.015)"
 heading_gradient = "linear-gradient(135deg, #88c0d0, #d8dee9)"
+select_bar = "#88c0d0"
+select_bg = "rgba(136, 192, 208, 0.08)"
+select_cursor_bar = "#d8dee9"
+select_cursor_bg = "rgba(136, 192, 208, 0.15)"
 
 [syntax]
 keyword = "#81a1c1"

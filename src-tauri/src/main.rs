@@ -131,6 +131,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .manage(registry)
         .manage(app_state)
         .manage(theme_engine.clone())
@@ -155,6 +156,7 @@ fn main() {
             commands::new_window,
             commands::list_windows,
             commands::focus_window,
+            commands::get_block_sources,
         ])
         .setup(move |app| {
             // Apply macOS vibrancy (frosted glass blur behind the window)

@@ -59,6 +59,8 @@ class KeyboardEngine {
         'H':      { fn: () => window.lexerApp?.prevBuffer() },
         'L':      { fn: () => window.lexerApp?.nextBuffer() },
         'q':      { fn: () => this._quit() },
+        'v':      { fn: () => this._enterSelectMode(false) },
+        'V':      { fn: () => this._enterSelectMode(true) },
         '?':      { fn: () => this._showHelp() },
         'g':      { mode: 'goto' },
         ' ':      { mode: 'space' },
@@ -185,6 +187,33 @@ class KeyboardEngine {
           ['=', 'reset zoom'],
         ],
       },
+      select: {
+        title: 'v - Select',
+        keys: [
+          ['j/k', 'navigate blocks'],
+          ['d/u', 'jump 5 blocks'],
+          [']/[', 'next/prev heading'],
+          ['{/}', 'section start/end'],
+          ['x', 'toggle block'],
+          ['o', 'swap anchor/cursor'],
+          ['a', 'select all'],
+          ['y', 'copy as markdown'],
+          ['Y', 'copy as plain text'],
+          ['c', 'copy as context block'],
+          ['\u21B5', 'agent menu'],
+          ['esc', 'cancel'],
+        ],
+      },
+      'select:agent': {
+        title: '\u21B5 - Agent',
+        keys: [
+          ['c', 'copy as context block'],
+          ['o', 'open in Claude'],
+          ['p', 'pipe to command'],
+          ['u', 'send to URL endpoint'],
+          ['esc', 'back to select'],
+        ],
+      },
     };
   }
 
@@ -210,6 +239,12 @@ class KeyboardEngine {
     // Hint mode has special handling (Vimium-style link jump)
     if (this.mode === 'hint') {
       this._handleHintKey(e);
+      return;
+    }
+
+    // Select mode has special handling (block selection)
+    if (this.mode === 'select') {
+      this._handleSelectKey(e);
       return;
     }
 
@@ -280,7 +315,7 @@ class KeyboardEngine {
     } else if (action.fn) {
       action.fn();
       // Return to normal after action in sub-modes
-      if (this.mode !== 'normal' && this.mode !== 'search' && this.mode !== 'hint') {
+      if (this.mode !== 'normal' && this.mode !== 'search' && this.mode !== 'hint' && this.mode !== 'select') {
         this.setMode('normal');
       }
     }
@@ -334,7 +369,7 @@ class KeyboardEngine {
 
   _updateModeBadge() {
     if (!this.modeBadge) return;
-    const labels = { normal: 'NOR', goto: 'GOT', space: 'SPC', search: 'SCH', view: 'VIW', hint: 'HNT' };
+    const labels = { normal: 'NOR', goto: 'GOT', space: 'SPC', search: 'SCH', view: 'VIW', hint: 'HNT', select: 'SEL' };
     this.modeBadge.textContent = labels[this.mode] || this.mode.toUpperCase();
     this.modeBadge.className = `mode-badge mode-${this.mode}`;
   }
@@ -367,7 +402,7 @@ class KeyboardEngine {
     this.timeout = setTimeout(() => {
       this.pending = '';
       this._updatePending();
-      if (this.mode !== 'normal' && this.mode !== 'search') {
+      if (this.mode !== 'normal' && this.mode !== 'search' && this.mode !== 'select') {
         this.setMode('normal');
       }
     }, 1000);
@@ -1071,6 +1106,570 @@ class KeyboardEngine {
       }
     }
     return labels;
+  }
+
+  // --- Block Select Mode ---
+
+  _getSelectableBlocks() {
+    const sel = 'h1, h2, h3, h4, h5, h6, p, pre, blockquote, ul, ol, table, hr, details, .footnote-definition';
+    return Array.from(this.contentEl.querySelectorAll('[data-block-index]'));
+  }
+
+  _enterSelectMode(sectionSelect) {
+    this._selectBlocks = this._getSelectableBlocks();
+    if (this._selectBlocks.length === 0) return;
+
+    this._selectExplicit = new Set();
+    this._selectSubMode = null;
+
+    // Find the block nearest to viewport center
+    const viewMid = this.contentEl.scrollTop + this.contentEl.clientHeight / 2;
+    let nearestIdx = 0;
+    let nearestDist = Infinity;
+    for (let i = 0; i < this._selectBlocks.length; i++) {
+      const el = this._selectBlocks[i];
+      const elMid = el.offsetTop + el.offsetHeight / 2;
+      const dist = Math.abs(elMid - viewMid);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestIdx = i;
+      }
+    }
+
+    this._selectAnchor = nearestIdx;
+    this._selectCursor = nearestIdx;
+
+    if (sectionSelect) {
+      // V: select from current heading to before next heading of same/higher level
+      // Find the heading at or before current position
+      let headingIdx = nearestIdx;
+      while (headingIdx > 0 && !this._isHeadingBlock(headingIdx)) {
+        headingIdx--;
+      }
+      this._selectAnchor = headingIdx;
+
+      // Find next heading of same or higher level
+      const anchorLevel = this._getHeadingLevel(headingIdx) || 99;
+      let endIdx = headingIdx + 1;
+      while (endIdx < this._selectBlocks.length) {
+        const lvl = this._getHeadingLevel(endIdx);
+        if (lvl && lvl <= anchorLevel) break;
+        endIdx++;
+      }
+      this._selectCursor = Math.min(endIdx - 1, this._selectBlocks.length - 1);
+    }
+
+    this.mode = 'select';
+    document.documentElement.dataset.mode = 'select';
+    this._updateModeBadge();
+    this._updateSelectHighlights();
+    this._updateSelectStatus();
+    this._showWhichKey('select');
+    this._scrollCursorIntoView();
+  }
+
+  _exitSelectMode() {
+    // Clear all block highlights
+    for (const el of (this._selectBlocks || [])) {
+      el.classList.remove('block-selected', 'block-cursor', 'block-toggled');
+    }
+    this._selectBlocks = null;
+    this._selectAnchor = null;
+    this._selectCursor = null;
+    this._selectExplicit = null;
+    this._selectSubMode = null;
+    this.setMode('normal');
+  }
+
+  _handleSelectKey(e) {
+    // Agent sub-mode
+    if (this._selectSubMode === 'agent') {
+      this._handleAgentKey(e);
+      return;
+    }
+
+    // Pipe prompt sub-mode
+    if (this._selectSubMode === 'pipe-prompt') {
+      this._handlePipePromptKey(e);
+      return;
+    }
+
+    e.preventDefault();
+    const key = e.key;
+
+    switch (key) {
+      case 'Escape':
+        this._exitSelectMode();
+        break;
+      case 'j':
+      case 'ArrowDown':
+        this._selectMove(1);
+        break;
+      case 'k':
+      case 'ArrowUp':
+        this._selectMove(-1);
+        break;
+      case 'd':
+        this._selectMove(5);
+        break;
+      case 'u':
+        this._selectMove(-5);
+        break;
+      case 'G':
+        this._selectMoveTo(this._selectBlocks.length - 1);
+        break;
+      case 'g':
+        this._selectMoveTo(0);
+        break;
+      case ']':
+        this._selectMoveToHeading(1);
+        break;
+      case '[':
+        this._selectMoveToHeading(-1);
+        break;
+      case '}':
+        this._selectMoveToSectionEnd();
+        break;
+      case '{':
+        this._selectMoveToSectionStart();
+        break;
+      case 'x':
+        this._selectToggle();
+        break;
+      case 'o':
+        this._selectSwapAnchor();
+        break;
+      case 'a':
+        this._selectAll();
+        break;
+      case 'y':
+        this._selectCopyMarkdown();
+        break;
+      case 'Y':
+        this._selectCopyPlainText();
+        break;
+      case 'c':
+        this._selectCopyContext();
+        break;
+      case 's':
+        this._selectSendDefault();
+        break;
+      case 'Enter':
+        this._enterAgentSubMode();
+        break;
+      default:
+        break;
+    }
+  }
+
+  // --- Select: Navigation ---
+
+  _selectMove(delta) {
+    if (!this._selectBlocks) return;
+    const newIdx = Math.max(0, Math.min(this._selectBlocks.length - 1, this._selectCursor + delta));
+    this._selectCursor = newIdx;
+    this._updateSelectHighlights();
+    this._updateSelectStatus();
+    this._scrollCursorIntoView();
+  }
+
+  _selectMoveTo(idx) {
+    if (!this._selectBlocks) return;
+    this._selectCursor = Math.max(0, Math.min(this._selectBlocks.length - 1, idx));
+    this._updateSelectHighlights();
+    this._updateSelectStatus();
+    this._scrollCursorIntoView();
+  }
+
+  _selectMoveToHeading(direction) {
+    if (!this._selectBlocks) return;
+    let idx = this._selectCursor + direction;
+    while (idx >= 0 && idx < this._selectBlocks.length) {
+      if (this._isHeadingBlock(idx)) {
+        this._selectCursor = idx;
+        this._updateSelectHighlights();
+        this._updateSelectStatus();
+        this._scrollCursorIntoView();
+        return;
+      }
+      idx += direction;
+    }
+  }
+
+  _selectMoveToSectionEnd() {
+    if (!this._selectBlocks) return;
+    const curLevel = this._getCurrentSectionLevel();
+    let idx = this._selectCursor + 1;
+    while (idx < this._selectBlocks.length) {
+      const lvl = this._getHeadingLevel(idx);
+      if (lvl && lvl <= curLevel) {
+        this._selectMoveTo(idx - 1);
+        return;
+      }
+      idx++;
+    }
+    this._selectMoveTo(this._selectBlocks.length - 1);
+  }
+
+  _selectMoveToSectionStart() {
+    if (!this._selectBlocks) return;
+    // Move to the heading that starts the current section
+    let idx = this._selectCursor;
+    while (idx > 0 && !this._isHeadingBlock(idx)) {
+      idx--;
+    }
+    this._selectMoveTo(idx);
+  }
+
+  // --- Select: Manipulation ---
+
+  _selectToggle() {
+    if (!this._selectExplicit) return;
+    const idx = this._selectCursor;
+    if (this._selectExplicit.has(idx)) {
+      this._selectExplicit.delete(idx);
+    } else {
+      this._selectExplicit.add(idx);
+    }
+    this._updateSelectHighlights();
+    this._updateSelectStatus();
+  }
+
+  _selectSwapAnchor() {
+    const tmp = this._selectAnchor;
+    this._selectAnchor = this._selectCursor;
+    this._selectCursor = tmp;
+    this._updateSelectHighlights();
+    this._scrollCursorIntoView();
+  }
+
+  _selectAll() {
+    if (!this._selectBlocks) return;
+    this._selectAnchor = 0;
+    this._selectCursor = this._selectBlocks.length - 1;
+    this._selectExplicit = new Set();
+    this._updateSelectHighlights();
+    this._updateSelectStatus();
+  }
+
+  // --- Select: Highlight Updates ---
+
+  _getSelectedIndices() {
+    const lo = Math.min(this._selectAnchor, this._selectCursor);
+    const hi = Math.max(this._selectAnchor, this._selectCursor);
+    const indices = new Set();
+    for (let i = lo; i <= hi; i++) {
+      indices.add(i);
+    }
+    // Union with explicit toggles: add those outside range, remove those inside
+    if (this._selectExplicit) {
+      for (const idx of this._selectExplicit) {
+        if (indices.has(idx)) {
+          indices.delete(idx);
+        } else {
+          indices.add(idx);
+        }
+      }
+    }
+    return indices;
+  }
+
+  _updateSelectHighlights() {
+    if (!this._selectBlocks) return;
+    const selected = this._getSelectedIndices();
+    for (let i = 0; i < this._selectBlocks.length; i++) {
+      const el = this._selectBlocks[i];
+      const isSelected = selected.has(i);
+      const isCursor = i === this._selectCursor;
+      const isToggled = this._selectExplicit && this._selectExplicit.has(i) && !this._isInRange(i);
+
+      el.classList.toggle('block-selected', isSelected && !isCursor);
+      el.classList.toggle('block-cursor', isCursor);
+      el.classList.toggle('block-toggled', isToggled && isSelected);
+    }
+  }
+
+  _isInRange(idx) {
+    const lo = Math.min(this._selectAnchor, this._selectCursor);
+    const hi = Math.max(this._selectAnchor, this._selectCursor);
+    return idx >= lo && idx <= hi;
+  }
+
+  _updateSelectStatus() {
+    const count = this._getSelectedIndices().size;
+    if (this.pendingEl) {
+      const modeLabel = this._selectSubMode === 'agent' ? 'SEL\u00B7AGT' : '';
+      this.pendingEl.textContent = `${count} block${count !== 1 ? 's' : ''} selected`;
+    }
+  }
+
+  _scrollCursorIntoView() {
+    if (!this._selectBlocks || this._selectCursor == null) return;
+    const el = this._selectBlocks[this._selectCursor];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  // --- Select: Helpers ---
+
+  _isHeadingBlock(idx) {
+    if (!this._selectBlocks || !this._selectBlocks[idx]) return false;
+    return /^H[1-6]$/.test(this._selectBlocks[idx].tagName);
+  }
+
+  _getHeadingLevel(idx) {
+    if (!this._selectBlocks || !this._selectBlocks[idx]) return null;
+    const tag = this._selectBlocks[idx].tagName;
+    const m = tag.match(/^H([1-6])$/);
+    return m ? parseInt(m[1], 10) : null;
+  }
+
+  _getCurrentSectionLevel() {
+    // Walk backward from cursor to find the enclosing heading level
+    let idx = this._selectCursor;
+    while (idx >= 0) {
+      const lvl = this._getHeadingLevel(idx);
+      if (lvl) return lvl;
+      idx--;
+    }
+    return 1; // default to h1 if no heading found
+  }
+
+  // --- Select: Clipboard Helper ---
+
+  async _writeClipboard(text) {
+    // Use Tauri clipboard plugin to bypass browser permission restrictions
+    await invoke('plugin:clipboard-manager|write_text', { text });
+  }
+
+  // --- Select: Copy Actions ---
+
+  async _selectCopyMarkdown() {
+    const indices = [...this._getSelectedIndices()].sort((a, b) => a - b);
+    if (indices.length === 0) return;
+
+    try {
+      const source = await invoke('get_block_sources', { indices });
+      await this._writeClipboard(source);
+      this._showSelectToast(`Copied ${indices.length} block${indices.length !== 1 ? 's' : ''} as markdown`);
+    } catch (err) {
+      this._showSelectToast(`Copy failed: ${err}`, true);
+    }
+    this._exitSelectMode();
+  }
+
+  async _selectCopyPlainText() {
+    const indices = [...this._getSelectedIndices()].sort((a, b) => a - b);
+    if (indices.length === 0) return;
+
+    try {
+      const texts = indices.map(i => this._selectBlocks[i]?.textContent?.trim()).filter(Boolean);
+      const text = texts.join('\n\n');
+      await this._writeClipboard(text);
+      this._showSelectToast(`Copied ${indices.length} block${indices.length !== 1 ? 's' : ''} as plain text`);
+    } catch (err) {
+      this._showSelectToast(`Copy failed: ${err}`, true);
+    }
+    this._exitSelectMode();
+  }
+
+  async _selectCopyContext() {
+    const indices = [...this._getSelectedIndices()].sort((a, b) => a - b);
+    if (indices.length === 0) return;
+
+    try {
+      const source = await invoke('get_block_sources', { indices });
+      const filePath = await invoke('get_current_file') || 'unknown';
+      const blockRange = indices.length === 1 ? `${indices[0]}` : `${indices[0]}-${indices[indices.length - 1]}`;
+      const context = `<context source="${filePath}" blocks="${blockRange}">\n${source}\n</context>`;
+      await this._writeClipboard(context);
+      this._showSelectToast(`Copied context block to clipboard`);
+    } catch (err) {
+      this._showSelectToast(`Copy failed: ${err}`, true);
+    }
+    this._exitSelectMode();
+  }
+
+  _selectSendDefault() {
+    // For now, default to context copy. Config-driven dispatch is future work.
+    this._selectCopyContext();
+  }
+
+  // --- Select: Agent Sub-Mode ---
+
+  _enterAgentSubMode() {
+    this._selectSubMode = 'agent';
+    this._hideWhichKey();
+    this._showWhichKey('select:agent');
+    // Update mode badge to show SEL·AGT
+    if (this.modeBadge) {
+      this.modeBadge.textContent = 'SEL\u00B7AGT';
+    }
+    this._updateSelectStatus();
+  }
+
+  _handleAgentKey(e) {
+    e.preventDefault();
+    const key = e.key;
+
+    switch (key) {
+      case 'Escape':
+        // Return to select mode (preserve selection)
+        this._selectSubMode = null;
+        this._hideWhichKey();
+        this._showWhichKey('select');
+        this._updateModeBadge();
+        this._updateSelectStatus();
+        break;
+      case 'c':
+        this._selectCopyContext();
+        break;
+      case 'o':
+        this._selectOpenClaude();
+        break;
+      case 'p':
+        this._enterPipePrompt();
+        break;
+      case 'u':
+        this._selectSendUrl();
+        break;
+      default:
+        break;
+    }
+  }
+
+  async _selectOpenClaude() {
+    const indices = [...this._getSelectedIndices()].sort((a, b) => a - b);
+    if (indices.length === 0) return;
+
+    try {
+      const source = await invoke('get_block_sources', { indices });
+      const filePath = await invoke('get_current_file') || 'unknown';
+      const blockRange = indices.length === 1 ? `${indices[0]}` : `${indices[0]}-${indices[indices.length - 1]}`;
+      const context = `<context source="${filePath}" blocks="${blockRange}">\n${source}\n</context>`;
+      const encoded = encodeURIComponent(context);
+      const url = `claude://context?text=${encoded}`;
+
+      try {
+        await invoke('plugin:shell|open', { path: url });
+        this._showSelectToast('Sent to Claude');
+      } catch (_) {
+        // Fallback: copy to clipboard
+        await this._writeClipboard(context);
+        this._showSelectToast('Claude not found \u2014 copied to clipboard');
+      }
+    } catch (err) {
+      this._showSelectToast(`Failed: ${err}`, true);
+    }
+    this._exitSelectMode();
+  }
+
+  // --- Select: Pipe Prompt ---
+
+  _enterPipePrompt() {
+    this._selectSubMode = 'pipe-prompt';
+    this._hideWhichKey();
+    // Reuse search bar for pipe prompt
+    if (this.searchBar) {
+      this.searchBar.classList.add('visible');
+      const label = this.searchBar.querySelector('.search-label');
+      if (label) label.textContent = '\u25B8';
+    }
+    if (this.searchInput) {
+      this.searchInput.value = '';
+      this.searchInput.placeholder = 'Shell command...';
+      this.searchInput.focus();
+    }
+  }
+
+  _handlePipePromptKey(e) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      this._exitPipePrompt();
+      // Return to agent sub-mode
+      this._selectSubMode = 'agent';
+      this._showWhichKey('select:agent');
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const cmd = this.searchInput?.value?.trim();
+      if (cmd) {
+        this._executePipe(cmd);
+      }
+      return;
+    }
+
+    // Let input handle all other typing
+  }
+
+  _exitPipePrompt() {
+    if (this.searchBar) {
+      this.searchBar.classList.remove('visible');
+      const label = this.searchBar.querySelector('.search-label');
+      if (label) label.textContent = '/';
+    }
+    if (this.searchInput) {
+      this.searchInput.value = '';
+      this.searchInput.placeholder = 'Search...';
+      this.searchInput.blur();
+    }
+  }
+
+  async _executePipe(command) {
+    this._exitPipePrompt();
+    const indices = [...this._getSelectedIndices()].sort((a, b) => a - b);
+    if (indices.length === 0) return;
+
+    try {
+      const source = await invoke('get_block_sources', { indices });
+      // Use shell plugin to pipe content to command
+      const result = await invoke('plugin:shell|execute', {
+        program: 'sh',
+        args: ['-c', `echo ${JSON.stringify(source)} | ${command}`],
+      });
+      this._showSelectToast(`Piped to "${command}"`);
+    } catch (err) {
+      // Shell plugin execute may not be available, fallback to copying
+      try {
+        const source = await invoke('get_block_sources', { indices });
+        await this._writeClipboard(source);
+        this._showSelectToast(`Pipe unavailable \u2014 copied to clipboard`);
+      } catch (e2) {
+        this._showSelectToast(`Pipe failed: ${err}`, true);
+      }
+    }
+    this._exitSelectMode();
+  }
+
+  async _selectSendUrl() {
+    // URL endpoint support requires config — show helpful message for now
+    this._showSelectToast('Set [agents] endpoint_url in config.toml');
+    this._selectSubMode = null;
+    this._hideWhichKey();
+    this._showWhichKey('select');
+    this._updateModeBadge();
+  }
+
+  // --- Select: Toast ---
+
+  _showSelectToast(message, isError) {
+    const statusFile = document.getElementById('status-file');
+    if (!statusFile) return;
+
+    const original = statusFile.textContent;
+    statusFile.textContent = `${message} ${isError ? '\u2717' : '\u2713'}`;
+    if (isError) {
+      statusFile.style.color = '#f85149';
+    }
+
+    const duration = isError ? 4000 : 2000;
+    setTimeout(() => {
+      statusFile.textContent = original;
+      statusFile.style.color = '';
+    }, duration);
   }
 
   // --- Helpers ---

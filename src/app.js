@@ -196,6 +196,7 @@ async function closeOtherBuffers() {
 function applyBufferContent(result) {
   currentBufferId = result.buffer_id;
   contentEl.innerHTML = result.html;
+  indexBlocks();
   statusFileEl.textContent = result.title;
   document.title = `${result.title} - Lexer`;
 
@@ -220,6 +221,7 @@ async function openFile(path) {
     });
     currentBufferId = result.buffer_id;
     contentEl.innerHTML = result.html;
+    indexBlocks();
     statusFileEl.textContent = result.title;
     document.title = `${result.title} - Lexer`;
     renderTabBar(result.buffers);
@@ -300,6 +302,7 @@ listen('open-file-arg', (event) => {
 listen('file-changed', (event) => {
   const scrollPos = contentEl.scrollTop;
   contentEl.innerHTML = event.payload.html;
+  indexBlocks();
   statusFileEl.textContent = event.payload.title;
   requestAnimationFrame(() => {
     contentEl.scrollTop = scrollPos;
@@ -415,6 +418,22 @@ listen('startup-config', async (event) => {
   }
 });
 
+// --- Block Indexing (for Block Select mode) ---
+
+const BLOCK_SELECTORS = 'h1, h2, h3, h4, h5, h6, p, pre, blockquote, ul, ol, table, hr, details, .footnote-definition';
+
+function indexBlocks() {
+  let idx = 0;
+  for (const child of contentEl.children) {
+    if (child.matches(BLOCK_SELECTORS)) {
+      child.setAttribute('data-block-index', idx);
+      idx++;
+    } else {
+      child.removeAttribute('data-block-index');
+    }
+  }
+}
+
 // --- Expose for other modules ---
 window.lexerApp = {
   openFile,
@@ -425,5 +444,6 @@ window.lexerApp = {
   prevBuffer,
   closeOtherBuffers,
   loadTheme,
+  indexBlocks,
   get currentBufferId() { return currentBufferId; },
 };

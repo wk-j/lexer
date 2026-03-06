@@ -132,7 +132,7 @@ pub fn open_file(
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_else(|| "Untitled".into());
 
-    let (html, toc) = render_markdown(&content, &registry);
+    let (html, toc, block_sources) = render_markdown(&content, &registry);
 
     // Create buffer
     let buffer_id = st.alloc_buffer_id();
@@ -144,6 +144,8 @@ pub fn open_file(
         toc: toc.clone(),
         scroll_position: 0.0,
         modified: false,
+        source: content.clone(),
+        block_sources: block_sources.clone(),
     };
 
     st.buffers.push(buffer);
@@ -162,7 +164,7 @@ pub fn open_file(
                     .file_name()
                     .map(|n| n.to_string_lossy().into_owned())
                     .unwrap_or_else(|| "Untitled".into());
-                let (rendered_html, rendered_toc) = render_markdown(&source, &reg);
+                let (rendered_html, rendered_toc, rendered_blocks) = render_markdown(&source, &reg);
 
                 // Update all buffers for this file
                 if let Ok(mut st) = state_clone.lock() {
@@ -175,6 +177,8 @@ pub fn open_file(
                             buf.html = rendered_html.clone();
                             buf.toc = rendered_toc.clone();
                             buf.title = file_title.clone();
+                            buf.source = source.clone();
+                            buf.block_sources = rendered_blocks.clone();
 
                             if i == active_idx {
                                 // Active buffer: emit file-changed to update content panel
@@ -443,6 +447,28 @@ pub fn close_other_buffers(
     let buf = &st.buffers[0];
     let buffers = buffer_info_list(&st);
     Ok(buffer_content(buf, buffers))
+}
+
+// --- Block Select: get source for selected blocks ---
+
+#[tauri::command]
+pub fn get_block_sources(
+    indices: Vec<usize>,
+    state: State<'_, Arc<Mutex<AppState>>>,
+) -> Result<String, String> {
+    let st = state.lock().map_err(|e| e.to_string())?;
+    let buf = st.active_buffer().ok_or("No buffer open")?;
+
+    let mut parts: Vec<&str> = Vec::new();
+    for &idx in &indices {
+        if let Some(block) = buf.block_sources.iter().find(|b| b.index == idx) {
+            if block.end <= buf.source.len() {
+                parts.push(&buf.source[block.start..block.end]);
+            }
+        }
+    }
+
+    Ok(parts.join("\n\n"))
 }
 
 // --- Existing commands (updated) ---

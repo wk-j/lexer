@@ -1,7 +1,6 @@
+use crate::highlight::{highlight_code, LanguageRegistry};
 use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
 use serde::Serialize;
-
-use crate::highlight::{highlight_code, LanguageRegistry};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TocEntry {
@@ -10,16 +9,27 @@ pub struct TocEntry {
     pub id: String,
 }
 
-pub fn render_markdown(source: &str, registry: &LanguageRegistry) -> (String, Vec<TocEntry>) {
+#[derive(Debug, Clone, Serialize)]
+pub struct BlockSource {
+    pub index: usize,
+    pub start: usize,
+    pub end: usize,
+}
+
+pub fn render_markdown(
+    source: &str,
+    registry: &LanguageRegistry,
+) -> (String, Vec<TocEntry>, Vec<BlockSource>) {
     let opts = Options::ENABLE_TABLES
         | Options::ENABLE_STRIKETHROUGH
         | Options::ENABLE_TASKLISTS
         | Options::ENABLE_FOOTNOTES;
 
-    let parser = Parser::new_ext(source, opts);
+    let parser = Parser::new_ext(source, opts).into_offset_iter();
 
     let mut html = String::with_capacity(source.len() * 2);
     let mut toc: Vec<TocEntry> = Vec::new();
+    let mut block_sources: Vec<BlockSource> = Vec::new();
     let mut in_code_block = false;
     let mut code_lang = String::new();
     let mut code_buffer = String::new();
@@ -27,8 +37,35 @@ pub fn render_markdown(source: &str, registry: &LanguageRegistry) -> (String, Ve
     let mut heading_level: u8 = 0;
     let mut heading_text = String::new();
 
+    // Track top-level block boundaries for source map
+    let mut block_depth: usize = 0;
+    let mut block_start: usize = 0;
+    let mut block_index: usize = 0;
+
     // Collect events, intercept code blocks and headings
-    for event in parser {
+    for (event, range) in parser {
+        // Track top-level block start/end for source mapping
+        match &event {
+            Event::Start(_) => {
+                if block_depth == 0 {
+                    block_start = range.start;
+                }
+                block_depth += 1;
+            }
+            Event::End(_) => {
+                block_depth = block_depth.saturating_sub(1);
+                if block_depth == 0 {
+                    block_sources.push(BlockSource {
+                        index: block_index,
+                        start: block_start,
+                        end: range.end,
+                    });
+                    block_index += 1;
+                }
+            }
+            _ => {}
+        }
+
         match event {
             Event::Start(Tag::CodeBlock(kind)) => {
                 in_code_block = true;
@@ -107,7 +144,7 @@ pub fn render_markdown(source: &str, registry: &LanguageRegistry) -> (String, Ve
         }
     }
 
-    (html, toc)
+    (html, toc, block_sources)
 }
 
 fn escape_html(s: &str) -> String {

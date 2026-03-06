@@ -104,6 +104,19 @@ pub struct ThemeColors {
     pub spotlight_color: Option<String>,
     #[serde(default)]
     pub heading_gradient: Option<String>,
+    // Block select
+    #[serde(default)]
+    pub select_bar: Option<String>,
+    #[serde(default)]
+    pub select_bg: Option<String>,
+    #[serde(default)]
+    pub select_cursor_bar: Option<String>,
+    #[serde(default)]
+    pub select_cursor_bg: Option<String>,
+    #[serde(default)]
+    pub select_bar_width: Option<String>,
+    #[serde(default)]
+    pub select_bar_offset: Option<String>,
 }
 
 impl Default for ThemeColors {
@@ -134,6 +147,12 @@ impl Default for ThemeColors {
             table_row_alt: None,
             spotlight_color: None,
             heading_gradient: None,
+            select_bar: None,
+            select_bg: None,
+            select_cursor_bar: None,
+            select_cursor_bg: None,
+            select_bar_width: None,
+            select_bar_offset: None,
         }
     }
 }
@@ -507,6 +526,44 @@ fn compile_css(theme: &ThemeFile, base: Option<&ThemeFile>) -> String {
         c.heading_gradient,
         bc.map(|b| &b.heading_gradient),
         "linear-gradient(135deg, var(--accent), var(--text-primary))"
+    );
+
+    // Block select
+    var!(
+        "--select-bar",
+        c.select_bar,
+        bc.map(|b| &b.select_bar),
+        "var(--accent)"
+    );
+    var!(
+        "--select-bg",
+        c.select_bg,
+        bc.map(|b| &b.select_bg),
+        "rgba(88, 166, 255, 0.08)"
+    );
+    var!(
+        "--select-cursor-bar",
+        c.select_cursor_bar,
+        bc.map(|b| &b.select_cursor_bar),
+        "var(--text-primary)"
+    );
+    var!(
+        "--select-cursor-bg",
+        c.select_cursor_bg,
+        bc.map(|b| &b.select_cursor_bg),
+        "rgba(88, 166, 255, 0.15)"
+    );
+    var!(
+        "--select-bar-width",
+        c.select_bar_width,
+        bc.map(|b| &b.select_bar_width),
+        "3px"
+    );
+    var!(
+        "--select-bar-offset",
+        c.select_bar_offset,
+        bc.map(|b| &b.select_bar_offset),
+        "-16px"
     );
 
     // Syntax highlight tokens

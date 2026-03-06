@@ -30,6 +30,10 @@ table_border = "rgba(208, 215, 222, 0.6)"
 table_row_alt = "rgba(246, 248, 250, 0.5)"
 spotlight_color = "rgba(0, 0, 0, 0.015)"
 heading_gradient = "linear-gradient(135deg, var(--accent), #24292f)"
+select_bar = "var(--accent)"
+select_bg = "rgba(9, 105, 218, 0.08)"
+select_cursor_bar = "var(--text-primary)"
+select_cursor_bg = "rgba(9, 105, 218, 0.12)"
 
 [syntax]
 keyword = "#cf222e"

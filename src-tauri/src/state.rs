@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 use crate::fs::FileWatcher;
-use crate::markdown::TocEntry;
+use crate::markdown::{BlockSource, TocEntry};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct BufferState {
@@ -13,6 +13,12 @@ pub struct BufferState {
     pub toc: Vec<TocEntry>,
     pub scroll_position: f64,
     pub modified: bool,
+    /// Original Markdown source (for block select copy)
+    #[serde(skip)]
+    pub source: String,
+    /// Source byte ranges for each top-level block
+    #[serde(skip)]
+    pub block_sources: Vec<BlockSource>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

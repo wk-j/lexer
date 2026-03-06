@@ -41,6 +41,14 @@
   --cursor-x: -100px;
   --cursor-y: -100px;
 
+  /* Block select */
+  --select-bar: var(--accent);
+  --select-bg: rgba(88, 166, 255, 0.08);
+  --select-cursor-bar: var(--text-primary);
+  --select-cursor-bg: rgba(88, 166, 255, 0.15);
+  --select-bar-width: 3px;
+  --select-bar-offset: -16px;
+
   /* Syntax highlight colors */
   --hl-keyword: #ff7b72;
   --hl-string: #a5d6ff;
@@ -443,6 +451,7 @@ del { color: var(--text-muted); }
 .mode-search  { background: #98c379; color: #1e2127; }
 .mode-view    { background: #56b6c2; color: #1e2127; }
 .mode-hint    { background: #e06c75; color: #1e2127; }
+.mode-select  { background: #d19a66; color: #1e2127; }
 
 /* === Pending Keys === */
 #pending-keys {
@@ -544,6 +553,60 @@ mark.search-match {
 mark.search-match.current {
   background: rgba(255, 213, 79, 0.6);
   outline: 2px solid var(--accent);
+}
+
+/* === Block Select Mode === */
+.block-selected,
+.block-cursor {
+  position: relative;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+.block-selected::before,
+.block-cursor::before {
+  content: '';
+  position: absolute;
+  left: var(--select-bar-offset);
+  top: 0;
+  bottom: 0;
+  width: var(--select-bar-width);
+  border-radius: 2px;
+  transition: background 0.15s ease;
+}
+
+.block-selected {
+  background: var(--select-bg);
+}
+.block-selected::before {
+  background: var(--select-bar);
+}
+
+.block-cursor {
+  background: var(--select-cursor-bg);
+}
+.block-cursor::before {
+  background: var(--select-cursor-bar);
+}
+
+.block-toggled {
+  background: var(--select-bg);
+}
+.block-toggled::before {
+  /* dashed effect via repeating gradient */
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--select-bar) 0px,
+    var(--select-bar) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+/* Code blocks: ::before is clipped by overflow-x:auto, reposition inside padding */
+pre.block-selected::before,
+pre.block-cursor::before,
+pre.block-toggled::before {
+  left: 0;
 }
 
 /* === Link Focus (Tab navigation) === */
