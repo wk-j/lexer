@@ -160,18 +160,36 @@ fn main() {
             commands::get_working_directory,
         ])
         .setup(move |app| {
-            // Apply macOS vibrancy (frosted glass blur behind the window)
-            #[cfg(target_os = "macos")]
             {
-                use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
                 let window = app.get_webview_window("main").unwrap();
-                apply_vibrancy(
-                    &window,
-                    NSVisualEffectMaterial::UnderWindowBackground,
-                    None,
-                    None,
-                )
-                .expect("Failed to apply vibrancy");
+
+                // Apply macOS vibrancy (frosted glass blur behind the window)
+                #[cfg(target_os = "macos")]
+                {
+                    use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+                    apply_vibrancy(
+                        &window,
+                        NSVisualEffectMaterial::UnderWindowBackground,
+                        None,
+                        None,
+                    )
+                    .expect("Failed to apply vibrancy");
+                }
+
+                // Resize window to fit screen height
+                if let Ok(Some(monitor)) = window.current_monitor() {
+                    let screen = monitor.size();
+                    let scale = monitor.scale_factor();
+                    let screen_h = screen.height as f64 / scale;
+                    let screen_w = screen.width as f64 / scale;
+                    let win_w = 960.0_f64.min(screen_w * 0.8);
+                    let win_h = screen_h * 0.9;
+                    let _ = window.set_size(tauri::LogicalSize::new(win_w, win_h));
+                    // Center on screen
+                    let x = (screen_w - win_w) / 2.0;
+                    let y = (screen_h - win_h) / 2.0;
+                    let _ = window.set_position(tauri::LogicalPosition::new(x, y));
+                }
             }
 
             // Start theme hot-reload watcher for user themes directory
