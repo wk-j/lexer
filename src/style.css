@@ -17,7 +17,7 @@
   --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --font-family-mono: "SF Mono", "Fira Code", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
   --font-size: 16px;
-  --line-height: 1.7;
+  --line-height: 1.4;
   --code-font-size: 14px;
 
   --blockquote-border: #58a6ff;
@@ -317,7 +317,7 @@ pre code {
   background: none;
   padding: 0;
   font-size: var(--code-font-size);
-  line-height: 1.5;
+  line-height: 1.3;
 }
 
 /* Language badge */

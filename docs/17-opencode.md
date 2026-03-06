@@ -1,23 +1,30 @@
-# OpenCode Integration
+# AI Agent Integration
 
-Lexer integrates with [OpenCode](https://github.com/nicholasgriffintn/opencode) to send selected Markdown content as prompts to a running AI coding agent. The integration is fully automatic — Lexer discovers a running OpenCode instance in the same working directory, with no manual configuration required.
+Lexer integrates with AI coding agents through the **`;` leader key** (AI actions). Currently supported targets:
+
+- **OpenCode** — via HTTP API to a local instance (auto-discovered)
+- **Claude Desktop** — via `claude://` deep link protocol
+
+The `;` key works from normal mode without any selection. With block select, the same prompt dialog is available through the agent sub-mode (`Enter` → `o`/`c`).
+
+## OpenCode
+
+Lexer integrates with [OpenCode](https://github.com/nicholasgriffintn/opencode) to send prompts to a running AI coding agent. The integration is fully automatic — Lexer discovers a running OpenCode instance in the same working directory, with no manual configuration required.
 
 ## Overview
 
 ```
 Lexer (viewer)                          OpenCode (AI agent)
 ┌──────────────┐                        ┌──────────────────┐
-│ Block Select │                        │  TUI running on  │
-│   v → select │  HTTP POST /tui/publish│  --port 4096     │
-│   o → send   │ ───────────────────▶   │                  │
-│              │                        │  same CWD as     │
-│  /Users/wk/  │  GET /path (discovery) │  Lexer launch    │
-│  Source/proj  │ ◀─────────────────    │  /Users/wk/      │
-└──────────────┘                        │  Source/proj      │
-                                        └──────────────────┘
+│  ;o → prompt │  HTTP POST /tui/publish│  TUI running on  │
+│  dialog      │ ───────────────────▶   │  --port 4096     │
+│              │                        │                  │
+│  /Users/wk/  │  GET /path (discovery) │  same CWD as     │
+│  Source/proj  │ ◀─────────────────    │  Lexer launch    │
+└──────────────┘                        └──────────────────┘
 ```
 
-The user selects blocks in Lexer, presses `o` (or `Enter` → `o` in agent sub-mode), and the selected Markdown is sent as a prompt to OpenCode. OpenCode receives it as if the user typed it directly into its TUI input.
+The user presses `;o` from normal mode (or `Enter` → `o` from block select) and a **prompt dialog** appears. The user composes their prompt, optionally using placeholder tokens like `@selection` and `@path`. On submit, Lexer expands the placeholders and sends the final prompt to OpenCode.
 
 ## Discovery
 
@@ -116,42 +123,107 @@ Both steps are sequential — step 2 fires only after step 1 succeeds. A 5-secon
 
 ## Keyboard Integration
 
-OpenCode send is wired into the Block Select agent sub-mode.
+OpenCode actions are accessed two ways: the **`;` leader key** (from normal mode, no selection required) and the **agent sub-mode** (from block select, with selection context).
+
+### `;` Leader Key (AI Actions)
+
+Pressing `;` in **normal mode** enters the AI action sub-mode. This works even without a selection — the user can send prompts about the current file, ask questions, or include the entire file as context.
+
+| Key | Action | Delivery |
+|---|---|---|
+| `;` | Enter AI action mode (which-key shows available actions) | — |
+| `;o` | Open prompt dialog → send to OpenCode | HTTP POST `/tui/publish` |
+| `;c` | Open prompt dialog → send to Claude | `claude://context?text=...` deep link |
+
+The `;` leader works like `g` or `Space` — it shows a which-key popup and waits for a follow-up key.
+
+### Claude Delivery
+
+`;c` uses the same prompt dialog as `;o`. After placeholder expansion, the prompt is sent to Claude Desktop via the `claude://` deep link protocol:
+
+```
+claude://context?text=<url-encoded prompt>
+```
+
+If Claude Desktop is not installed (deep link fails), Lexer copies the expanded prompt to the clipboard and shows a toast: `Claude not found — copied to clipboard`.
 
 ### From Block Select
 
+When blocks are selected, the same prompt dialog is available via the agent sub-mode:
+
 | Key | Context | Action |
 |---|---|---|
-| `o` | Select mode | Send selection to OpenCode (direct) |
-| `Enter` → `o` | Agent sub-mode | Send selection to OpenCode (via menu) |
+| `Enter` → `o` | Agent sub-mode | Open prompt dialog for OpenCode (with selection) |
+| `Enter` → `c` | Agent sub-mode | Open prompt dialog for Claude (with selection) |
 
-The `o` key is reused from the existing agent sub-mode (previously "open in Claude"). The action is renamed to "send to OpenCode" since it's the more practical integration.
+### Prompt Dialog
 
-### Prompt Format
+Both `;o`/`;c` (normal mode) and agent `o`/`c` (select mode) open the same prompt dialog. The dialog input is pre-populated differently depending on context:
 
-When sending to OpenCode, the selected blocks are extracted as original Markdown source (via `get_block_sources`) and sent as the prompt text. The prompt is prefixed with a context header:
+- **With selection** (from select mode): pre-populated with `@selection`
+- **Without selection** (from `;` leader): empty input, user types freely
 
+The user can type free-form text using placeholder tokens to reference context:
+
+| Placeholder | Expands to |
+|---|---|
+| `@selection` | A context block containing the file path, block range, and the selected Markdown source. Empty string if nothing selected. |
+| `@path` | The relative path of the current file |
+
+`@selection` automatically includes the source path so the AI agent knows where the content comes from. It expands to:
 ```
-[context: path/to/file.md blocks 3-7]
+[context: <relative-path> blocks <range>]
+
+<markdown source>
+```
+
+For example, selecting blocks 3-7 in `docs/17-opencode.md` expands `@selection` to:
+```
+[context: docs/17-opencode.md blocks 3-7]
 
 ## Architecture
 
-The system uses a modular design with three layers...
-
-```rust
-fn main() {
-    let app = App::new();
-    app.run();
-}
-```
+The system uses a modular design...
 ```
 
-The context header helps the AI agent understand where the content comes from. The format is:
+**Dialog behavior:**
+- `Enter` — submit the prompt (expand placeholders, send to OpenCode)
+- `Escape` — cancel and return to previous mode
+- The input supports free-form text around the placeholders
+
+**Example inputs (with selection):**
 ```
-[context: <relative-path> blocks <range>]
-\n
-<markdown content>
+Refactor this code: @selection
 ```
+```
+@selection
+```
+
+**Example inputs (without selection, via `;o`):**
+```
+Explain the architecture of @path
+```
+```
+What does this file do?
+```
+```
+Fix the bug in the render function
+```
+
+If the user submits with just `@selection` and blocks are selected, the selected markdown is sent as the entire prompt. If `@selection` is used but nothing is selected, it expands to an empty string.
+
+### Placeholder Expansion
+
+Before sending, Lexer replaces placeholders in the user's prompt:
+
+1. `@selection` → context header + Markdown source from selected blocks (empty string if none selected)
+2. `@path` → relative file path (e.g., `docs/17-opencode.md`)
+
+If a placeholder appears multiple times, each occurrence is expanded. Unknown `@` tokens are left as-is.
+
+### Prompt Format (sent to OpenCode)
+
+The expanded prompt is sent directly as the `text` value in the `tui.prompt.append` call.
 
 ### Status Indicator
 
@@ -187,14 +259,12 @@ Called lazily on first send, or explicitly via a status check command.
 
 ### `send_to_opencode`
 
-Send a prompt to the discovered OpenCode instance.
+Send an already-expanded prompt to the discovered OpenCode instance. Placeholder expansion (`@selection`, `@path`) happens on the frontend before calling this command.
 
 ```rust
 #[tauri::command]
 pub async fn send_to_opencode(
-    content: String,
-    source: Option<String>,
-    blocks: Option<Vec<usize>>,
+    prompt: String,
     state: State<'_, Arc<Mutex<AppState>>>,
 ) -> Result<OpenCodeSendResult, String>
 
@@ -207,10 +277,9 @@ pub struct OpenCodeSendResult {
 
 Flow:
 1. If no cached connection, run discovery
-2. Format prompt with context header
-3. `POST /tui/publish` with `tui.prompt.append`
-4. `POST /tui/publish` with `tui.command.execute` → `prompt.submit`
-5. Return success/failure
+2. `POST /tui/publish` with `tui.prompt.append` using the expanded prompt
+3. `POST /tui/publish` with `tui.command.execute` → `prompt.submit`
+4. Return success/failure
 
 If the cached connection fails (server went away), clear the cache and retry discovery once.
 
@@ -292,31 +361,62 @@ OpenCode's TUI input accepts arbitrary-length text via `tui.prompt.append`. Ther
 
 ## Examples
 
-### Send a code block to OpenCode
+### Quick prompt from normal mode (no selection)
 
 ```
-v        → enter select mode (cursor on code block)
-o        → send to OpenCode
+;        → AI action mode (which-key shows: o=OpenCode, c=Claude)
+o        → prompt dialog appears (empty input)
+           user types: "Explain the architecture of this file"
+Enter    → sends to OpenCode
 ```
 
 Toast: `Sent to OpenCode ✓`
 
-### Send multiple blocks as context
+### Ask about current file
+
+```
+;o       → prompt dialog appears
+           user types: "What does @path do?"
+Enter    → expands @path, sends to OpenCode
+```
+
+### Send a code block with instructions
+
+```
+v        → enter select mode (cursor on code block)
+Enter    → agent menu
+o        → prompt dialog appears (pre-filled: @selection)
+           user edits: "Refactor this: @selection"
+Enter    → expands @selection, sends to OpenCode
+```
+
+Toast: `Sent to OpenCode ✓`
+
+### Send selection as-is
 
 ```
 v        → enter select mode
 j j j    → expand selection down 3 blocks
 Enter    → agent menu
-o        → send to OpenCode
+o        → prompt dialog appears (pre-filled: @selection)
+Enter    → sends the raw selection to OpenCode
 ```
 
-Toast: `Sent 4 blocks to OpenCode ✓`
+Toast: `Sent to OpenCode ✓`
+
+### Cancel without sending
+
+```
+;o       → prompt dialog appears
+Escape   → cancel, return to normal mode (nothing sent)
+```
 
 ### OpenCode not running
 
 ```
-v        → enter select mode
-o        → attempt send
+;o       → prompt dialog appears
+           user types: "Fix the bug"
+Enter    → attempts to send
 ```
 
 Toast: `No OpenCode instance found. Start with: opencode --port <N>`

@@ -61,6 +61,12 @@
   -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
 }
 
+/* Disable blur while scrolling for performance */
+.content-panel.is-scrolling {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 /* === Code Block Effects === */
 
 /* Ambient glow */
@@ -83,14 +89,7 @@
 /* Scroll shadows removed from pre code to avoid double-background
    with semi-transparent --code-bg stacking on the <pre> behind it. */
 
-/* Focus dim: dim surrounding content when hovering a code block */
-.content-panel:has(pre:hover) > *:not(pre:hover) {
-  opacity: 0.5;
-  transition: opacity 300ms ease;
-}
-.content-panel pre:hover {
-  opacity: 1;
-}
+/* Focus dim: disabled — was dimming surrounding content on code block hover */
 
 /* === Blockquote Effects === */
 
