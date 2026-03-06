@@ -127,4 +127,4 @@ Full specification in [`docs/`](docs/SPEC.md).
 
 ## License
 
-TBD
+MIT
