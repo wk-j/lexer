@@ -898,20 +898,20 @@ class KeyboardEngine {
 
   _enterHintMode() {
     // Collect all visible clickable elements in the content area
-    const contentRect = this.contentEl.getBoundingClientRect();
+    const containerRect = this.contentEl.getBoundingClientRect();
     const scrollTop = this.contentEl.scrollTop;
-    const viewTop = scrollTop;
-    const viewBottom = scrollTop + this.contentEl.clientHeight;
+    const scrollLeft = this.contentEl.scrollLeft;
 
     const selectors = 'a[href], button, [role="button"], summary, input[type="checkbox"]';
     const allElements = Array.from(this.contentEl.querySelectorAll(selectors));
 
     // Filter to only visible elements within the scroll viewport
+    // Use getBoundingClientRect to correctly handle elements nested inside tables/containers
     const visibleElements = allElements.filter(el => {
-      const top = el.offsetTop;
-      const bottom = top + el.offsetHeight;
-      // Element must overlap with the visible viewport
-      return bottom > viewTop && top < viewBottom && el.offsetWidth > 0 && el.offsetHeight > 0;
+      const rect = el.getBoundingClientRect();
+      // Element must overlap with the visible container and have non-zero size
+      return rect.bottom > containerRect.top && rect.top < containerRect.bottom &&
+             rect.width > 0 && rect.height > 0;
     });
 
     if (visibleElements.length === 0) return;
@@ -931,12 +931,17 @@ class KeyboardEngine {
       const el = visibleElements[i];
       const label = labels[i];
 
-      // Position the hint label near the element
+      // Position the hint label near the element using getBoundingClientRect
+      // to correctly handle elements nested inside tables and other containers
+      const elRect = el.getBoundingClientRect();
+      const hintTop = elRect.top - containerRect.top + scrollTop;
+      const hintLeft = elRect.left - containerRect.left + scrollLeft - 20;
+
       const hint = document.createElement('span');
       hint.className = 'hint-label';
       hint.textContent = label;
-      hint.style.top = `${el.offsetTop}px`;
-      hint.style.left = `${Math.max(0, el.offsetLeft - 20)}px`;
+      hint.style.top = `${hintTop}px`;
+      hint.style.left = `${Math.max(0, hintLeft)}px`;
 
       this._hintContainer.appendChild(hint);
       el.classList.add('hint-active');
