@@ -1,4 +1,4 @@
-use crate::highlight::{highlight_code, LanguageRegistry};
+use crate::highlight::{highlight_code, wrap_plain_lines, LanguageRegistry};
 use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
 use serde::Serialize;
 
@@ -99,7 +99,7 @@ pub fn render_markdown(
                         html.push_str(&format!(
                             "<pre{}><code>{}</code></pre>\n",
                             lang_attr,
-                            escape_html(&code_buffer)
+                            wrap_plain_lines(&escape_html(&code_buffer))
                         ));
                     }
                 }

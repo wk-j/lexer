@@ -334,6 +334,27 @@ pre[data-lang]::after {
   background: rgba(110, 118, 129, 0.1);
 }
 
+/* === Line Numbers (toggled via body.line-numbers) === */
+body.line-numbers pre code {
+  counter-reset: line-number;
+}
+body.line-numbers pre code .line {
+  display: block;
+  counter-increment: line-number;
+}
+body.line-numbers pre code .line::before {
+  content: counter(line-number);
+  display: inline-block;
+  width: 3ch;
+  margin-right: 1.2em;
+  text-align: right;
+  color: var(--text-muted);
+  opacity: 0.4;
+  font-size: inherit;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* === Syntax Highlighting === */
 .hl-keyword    { color: var(--hl-keyword); }
 .hl-string     { color: var(--hl-string); }

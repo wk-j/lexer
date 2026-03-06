@@ -58,6 +58,19 @@ const CSS_CLASSES: &[&str] = &[
     "hl-variable",
 ];
 
+/// Wrap plain (non-highlighted) code in line spans.
+/// Input should already be HTML-escaped.
+pub fn wrap_plain_lines(escaped_html: &str) -> String {
+    let trimmed = escaped_html.strip_suffix('\n').unwrap_or(escaped_html);
+    let mut result = String::with_capacity(trimmed.len() + trimmed.len() / 4);
+    for line in trimmed.split('\n') {
+        result.push_str("<span class=\"line\">");
+        result.push_str(line);
+        result.push_str("</span>");
+    }
+    result
+}
+
 /// Highlight source code and return HTML with <span class="hl-*"> wrappers
 pub fn highlight_code(registry: &LanguageRegistry, lang: &str, source: &str) -> Option<String> {
     let config = registry.get(lang)?;
@@ -97,5 +110,55 @@ pub fn highlight_code(registry: &LanguageRegistry, lang: &str, source: &str) -> 
         }
     }
 
-    Some(html)
+    Some(wrap_lines(&html))
+}
+
+/// Wrap each line of highlighted HTML in `<span class="line">...</span>`.
+///
+/// This is tricky because highlight spans can cross line boundaries.
+/// We split on newlines and re-open/close any active spans at boundaries.
+fn wrap_lines(html: &str) -> String {
+    let html = html.strip_suffix('\n').unwrap_or(html);
+    let mut result = String::with_capacity(html.len() + html.len() / 4);
+    let mut open_spans: Vec<String> = Vec::new();
+
+    result.push_str("<span class=\"line\">");
+
+    let mut chars = html.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '<' {
+            // Read the full tag
+            let mut tag = String::from('<');
+            for c in chars.by_ref() {
+                tag.push(c);
+                if c == '>' {
+                    break;
+                }
+            }
+
+            if tag.starts_with("</span") {
+                open_spans.pop();
+                result.push_str(&tag);
+            } else if tag.starts_with("<span") {
+                open_spans.push(tag.clone());
+                result.push_str(&tag);
+            } else {
+                result.push_str(&tag);
+            }
+        } else if ch == '\n' {
+            // Close all open spans, end line, start new line, re-open spans
+            for _ in open_spans.iter().rev() {
+                result.push_str("</span>");
+            }
+            result.push_str("</span><span class=\"line\">");
+            for span in &open_spans {
+                result.push_str(span);
+            }
+        } else {
+            result.push(ch);
+        }
+    }
+
+    result.push_str("</span>");
+    result
 }
