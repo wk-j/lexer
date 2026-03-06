@@ -10,3 +10,4 @@
 - **Tabs within windows**: Optional tabbed interface as alternative to separate windows
 - **Custom keymap file**: Full user-defined keymap remapping via config
 - **Block Select mode**: Structural content selection for copy and AI context — see [16-block-select.md](16-block-select.md)
+- **OpenCode integration**: Auto-discover and send prompts to OpenCode AI agent — see [17-opencode.md](17-opencode.md)

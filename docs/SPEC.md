@@ -22,6 +22,7 @@
 | 14 | [Build & Run](14-build.md) | Dev/release commands, platform support |
 | 15 | [Future Enhancements](15-future.md) | Roadmap items not yet in scope |
 | 16 | [Block Select](16-block-select.md) | Structural block selection, copy as Markdown, AI agent integration |
+| 17 | [OpenCode Integration](17-opencode.md) | Auto-discover OpenCode, send selections as prompts via HTTP |
 
 ## Implementation Tracking
 
