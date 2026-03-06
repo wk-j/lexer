@@ -652,8 +652,14 @@ class CommandPalette {
   async _expandCommandPlaceholders(template) {
     let result = template;
 
-    const filePath = await invoke('get_current_file').catch(() => '') || '';
+    const fileAbsolute = await invoke('get_current_file').catch(() => '') || '';
     const cwd = await invoke('get_working_directory').catch(() => '') || '';
+
+    // Make file path relative to CWD
+    let filePath = fileAbsolute;
+    if (cwd && fileAbsolute.startsWith(cwd + '/')) {
+      filePath = fileAbsolute.substring(cwd.length + 1);
+    }
 
     // Derive path components
     const parts = filePath.split('/');
@@ -663,9 +669,8 @@ class CommandPalette {
     const fileStem = dotIdx > 0 ? fileName.substring(0, dotIdx) : fileName;
     const fileExt = dotIdx > 0 ? fileName.substring(dotIdx + 1) : '';
 
-    // Absolute paths
-    const fileAbsolute = filePath && cwd ? `${cwd}/${filePath}` : filePath;
-    const dirAbsolute = dir && cwd ? `${cwd}/${dir}` : (cwd || dir);
+    // Absolute directory
+    const dirAbsolute = dir ? `${cwd}/${dir}` : cwd;
 
     result = result.replaceAll('{file_absolute}', fileAbsolute);
     result = result.replaceAll('{file_name}', fileName);
