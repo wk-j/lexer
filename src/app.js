@@ -18,6 +18,7 @@ const noDragSelectors = [
   '.search-bar',       // search input
   '.palette-overlay',  // command palette
   '.which-key',        // which-key popup
+  '.traffic-lights',   // custom traffic light buttons
   'button', 'input', 'a', 'select', 'textarea',
 ];
 
@@ -52,6 +53,34 @@ if (dragEl) {
       }
     } catch (_) {}
   });
+}
+
+// --- Custom Vertical Traffic Lights ---
+{
+  const win = window.__TAURI__.window.getCurrentWindow();
+
+  const tlClose = document.getElementById('tl-close');
+  const tlMinimize = document.getElementById('tl-minimize');
+  const tlMaximize = document.getElementById('tl-maximize');
+
+  if (tlClose) tlClose.addEventListener('click', () => win.close().catch(() => {}));
+  if (tlMinimize) tlMinimize.addEventListener('click', () => win.minimize().catch(() => {}));
+  if (tlMaximize) {
+    tlMaximize.addEventListener('click', async () => {
+      try {
+        if (await win.isFullscreen()) {
+          await win.setFullscreen(false);
+        } else {
+          await win.setFullscreen(true);
+        }
+      } catch (_) {}
+    });
+  }
+
+  // Grey out buttons when window loses focus
+  const tlBtns = document.querySelectorAll('.tl-btn');
+  window.addEventListener('blur', () => tlBtns.forEach(b => b.classList.add('inactive')));
+  window.addEventListener('focus', () => tlBtns.forEach(b => b.classList.remove('inactive')));
 }
 
 // --- Buffer State ---

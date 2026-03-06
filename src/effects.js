@@ -6,11 +6,137 @@ class EffectsEngine {
     this.contentEl = document.getElementById('content');
     this.observer = null;
     this.lightboxEl = null;
+    this._initGXBorder();
     this._initCursorTracking();
     this._initClickRipple();
     this._initScrollObserver();
     this._initContentObserver();
     this._applyEffects();
+  }
+
+  // --- Opera GX-Style Border with Cut Corner ---
+
+  _initGXBorder() {
+    this._gxCanvas = document.getElementById('gx-border');
+    if (!this._gxCanvas) return;
+    this._gxCtx = this._gxCanvas.getContext('2d');
+    this._gxDpr = window.devicePixelRatio || 1;
+
+    this._updateGXBorder();
+    window.addEventListener('resize', () => {
+      requestAnimationFrame(() => this._updateGXBorder());
+    });
+
+    // Redraw when theme changes (CSS variables update)
+    const themeObserver = new MutationObserver(() => {
+      requestAnimationFrame(() => this._updateGXBorder());
+    });
+    // Watch the <style id="lexer-theme"> element for content changes
+    const watchForThemeEl = () => {
+      const themeEl = document.getElementById('lexer-theme');
+      if (themeEl) {
+        themeObserver.observe(themeEl, { childList: true, characterData: true, subtree: true });
+      } else {
+        // Theme style not injected yet; watch <head> until it appears
+        const headObs = new MutationObserver(() => {
+          const el = document.getElementById('lexer-theme');
+          if (el) {
+            headObs.disconnect();
+            themeObserver.observe(el, { childList: true, characterData: true, subtree: true });
+            requestAnimationFrame(() => this._updateGXBorder());
+          }
+        });
+        headObs.observe(document.head, { childList: true });
+      }
+    };
+    watchForThemeEl();
+  }
+
+  _updateGXBorder() {
+    const canvas = this._gxCanvas;
+    const ctx = this._gxCtx;
+    if (!canvas || !ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+
+    // Size canvas to window at device pixel ratio
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.scale(dpr, dpr);
+
+    const styles = getComputedStyle(document.documentElement);
+    const cs = parseFloat(styles.getPropertyValue('--gx-corner-size')) || 10;
+    const bw = parseFloat(styles.getPropertyValue('--gx-border-width')) || 1.5;
+    const glowSpread = parseFloat(styles.getPropertyValue('--gx-glow-spread')) || 4;
+    const glowOpacity = parseFloat(styles.getPropertyValue('--gx-glow-opacity')) || 0.5;
+
+    // Read accent color for border
+    const accent = styles.getPropertyValue('--accent').trim() || '#58a6ff';
+    const bgOpaque = styles.getPropertyValue('--bg-base-opaque').trim() || '#0d1117';
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Opera GX-style: only left edge + cut diagonal + top edge (open L-shape)
+    const inset = bw / 2 + 0.5;
+    const buildPath = () => {
+      ctx.beginPath();
+      ctx.moveTo(inset, h);                       // bottom-left
+      ctx.lineTo(inset, cs + inset);              // left edge up to cut
+      ctx.lineTo(cs + inset, inset);              // diagonal cut
+      ctx.lineTo(w, inset);                       // top edge to right
+    };
+
+    // 1) Fill the cut corner triangle with opaque bg to mask content behind
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(cs + inset + 1, 0);
+    ctx.lineTo(0, cs + inset + 1);
+    ctx.closePath();
+    ctx.fillStyle = bgOpaque;
+    ctx.fill();
+    ctx.restore();
+
+    // 2) Draw glow layer (multiple passes for neon bloom)
+    ctx.save();
+    for (let i = 3; i >= 1; i--) {
+      buildPath();
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = bw + i * 2;
+      ctx.globalAlpha = glowOpacity * (0.3 / i);
+      ctx.shadowColor = accent;
+      ctx.shadowBlur = glowSpread * i * 2;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 3) Draw sharp border line
+    ctx.save();
+    buildPath();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = bw;
+    ctx.globalAlpha = 1;
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = glowSpread;
+    ctx.stroke();
+    ctx.restore();
+
+    // 4) Brighter accent on the cut diagonal for emphasis
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(inset, cs + inset);
+    ctx.lineTo(cs + inset, inset);
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = bw + 0.5;
+    ctx.globalAlpha = 1;
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = glowSpread * 3;
+    ctx.stroke();
+    ctx.restore();
   }
 
   // --- Cursor Spotlight ---

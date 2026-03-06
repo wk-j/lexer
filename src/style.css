@@ -41,6 +41,15 @@
   --cursor-x: -100px;
   --cursor-y: -100px;
 
+  /* GX-style border decoration */
+  --gx-border-color-start: var(--accent);
+  --gx-border-color-mid: var(--accent);
+  --gx-border-color-end: rgba(88, 166, 255, 0.2);
+  --gx-border-width: 1.5px;
+  --gx-corner-size: 10px;
+  --gx-glow-opacity: 0.6;
+  --gx-glow-spread: 8px;
+
   /* Block select */
   --select-bar: var(--accent);
   --select-bg: rgba(88, 166, 255, 0.08);
@@ -97,14 +106,90 @@ body {
   position: relative;
   z-index: 2;
   background: transparent;
+  margin-left: 36px; /* reserve left strip for traffic lights */
 }
 
 /* === Titlebar Drag Region (macOS overlay titlebar) === */
 .titlebar-drag {
-  height: 28px;
+  height: 4px;
   flex-shrink: 0;
-  /* Leave space for traffic lights on macOS */
-  padding-left: 78px;
+}
+
+/* === Custom Vertical Traffic Lights === */
+.traffic-lights {
+  position: fixed;
+  top: 16px;
+  left: 14px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  -webkit-app-region: no-drag;
+}
+
+.tl-btn {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  transition: opacity 0.15s ease, filter 0.15s ease;
+  -webkit-app-region: no-drag;
+}
+
+/* Default dim state — icons hidden */
+.tl-btn span {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+/* Show icons on hover */
+.traffic-lights:hover .tl-btn span {
+  display: block;
+}
+
+.tl-close {
+  background: #ff5f57;
+}
+.tl-close span::after {
+  content: "\00D7"; /* × */
+}
+
+.tl-minimize {
+  background: #febc2e;
+}
+.tl-minimize span::after {
+  content: "\2013"; /* – */
+}
+
+.tl-maximize {
+  background: #28c840;
+}
+.tl-maximize span::after {
+  content: "\2922"; /* ⤢ diagonal arrows */
+  font-size: 7px;
+}
+
+/* Hover brightness */
+.tl-btn:hover {
+  filter: brightness(1.15);
+}
+
+/* Inactive / unfocused window: grey out */
+.tl-btn.inactive {
+  background: rgba(255, 255, 255, 0.12);
+}
+.tl-btn.inactive span {
+  display: none !important;
 }
 
 /* === Tab Bar === */
@@ -124,8 +209,6 @@ body {
   user-select: none;
   backdrop-filter: blur(12px) saturate(150%);
   -webkit-backdrop-filter: blur(12px) saturate(150%);
-  /* account for transparent titlebar */
-  padding-top: 0;
 }
 .tab-bar::-webkit-scrollbar { display: none; }
 .tab-bar.visible {
@@ -318,6 +401,9 @@ pre code {
   padding: 0;
   font-size: var(--code-font-size);
   line-height: 1.3;
+}
+pre code .line {
+  display: block;
 }
 
 /* Language badge */

@@ -9,6 +9,16 @@
   <link rel="stylesheet" href="layout.css">
 </head>
 <body>
+  <!-- Opera GX-style window border with cut corner -->
+  <canvas class="gx-border" id="gx-border"></canvas>
+
+  <!-- Custom vertical traffic light buttons (macOS native ones are hidden) -->
+  <div class="traffic-lights" id="traffic-lights">
+    <button class="tl-btn tl-close" id="tl-close" title="Close"><span></span></button>
+    <button class="tl-btn tl-minimize" id="tl-minimize" title="Minimize"><span></span></button>
+    <button class="tl-btn tl-maximize" id="tl-maximize" title="Fullscreen"><span></span></button>
+  </div>
+
   <!-- Background layers (z-index 0-1) -->
   <canvas class="particle-canvas" id="particle-canvas"></canvas>
   <div class="app-backdrop"></div>

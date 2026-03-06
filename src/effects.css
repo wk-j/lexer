@@ -1,6 +1,18 @@
 /* === Lexer Visual Effects === */
 /* All effects use CSS custom properties and can be toggled via .effects-off */
 
+/* === Opera GX-Style Window Border === */
+
+.gx-border {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9990;
+  pointer-events: none;
+}
+
 /* === Background Layers === */
 
 /* Gradient mesh backdrop — transparent so macOS vibrancy shows through */
@@ -319,3 +331,4 @@ body.effects-off .content-panel h2 { box-shadow: none; }
 body.effects-off .content-panel hr { animation: none; box-shadow: none; }
 body.effects-off .content-panel img:hover { transform: none; }
 body.effects-off .fade-up { opacity: 1; transform: none; }
+body.effects-off .gx-border { display: none; }

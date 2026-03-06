@@ -66,3 +66,4 @@ noise_texture = true
 noise_opacity = 0.035
 scroll_animations = true
 heading_gradient_text = true
+gx_border = true

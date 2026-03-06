@@ -117,6 +117,21 @@ pub struct ThemeColors {
     pub select_bar_width: Option<String>,
     #[serde(default)]
     pub select_bar_offset: Option<String>,
+    // GX-style border decoration
+    #[serde(default)]
+    pub gx_border_color_start: Option<String>,
+    #[serde(default)]
+    pub gx_border_color_mid: Option<String>,
+    #[serde(default)]
+    pub gx_border_color_end: Option<String>,
+    #[serde(default)]
+    pub gx_border_width: Option<String>,
+    #[serde(default)]
+    pub gx_corner_size: Option<String>,
+    #[serde(default)]
+    pub gx_glow_opacity: Option<String>,
+    #[serde(default)]
+    pub gx_glow_spread: Option<String>,
 }
 
 impl Default for ThemeColors {
@@ -153,6 +168,13 @@ impl Default for ThemeColors {
             select_cursor_bg: None,
             select_bar_width: None,
             select_bar_offset: None,
+            gx_border_color_start: None,
+            gx_border_color_mid: None,
+            gx_border_color_end: None,
+            gx_border_width: None,
+            gx_corner_size: None,
+            gx_glow_opacity: None,
+            gx_glow_spread: None,
         }
     }
 }
@@ -202,6 +224,8 @@ pub struct ThemeEffects {
     pub scroll_animations: Option<bool>,
     #[serde(default)]
     pub heading_gradient_text: Option<bool>,
+    #[serde(default)]
+    pub gx_border: Option<bool>,
 }
 
 impl Default for ThemeEffects {
@@ -215,6 +239,7 @@ impl Default for ThemeEffects {
             noise_opacity: None,
             scroll_animations: None,
             heading_gradient_text: None,
+            gx_border: None,
         }
     }
 }
@@ -566,6 +591,50 @@ fn compile_css(theme: &ThemeFile, base: Option<&ThemeFile>) -> String {
         "-16px"
     );
 
+    // GX-style border decoration
+    var!(
+        "--gx-border-color-start",
+        c.gx_border_color_start,
+        bc.map(|b| &b.gx_border_color_start),
+        "var(--accent)"
+    );
+    var!(
+        "--gx-border-color-mid",
+        c.gx_border_color_mid,
+        bc.map(|b| &b.gx_border_color_mid),
+        "var(--accent)"
+    );
+    var!(
+        "--gx-border-color-end",
+        c.gx_border_color_end,
+        bc.map(|b| &b.gx_border_color_end),
+        "rgba(88, 166, 255, 0.2)"
+    );
+    var!(
+        "--gx-border-width",
+        c.gx_border_width,
+        bc.map(|b| &b.gx_border_width),
+        "1.5px"
+    );
+    var!(
+        "--gx-corner-size",
+        c.gx_corner_size,
+        bc.map(|b| &b.gx_corner_size),
+        "10px"
+    );
+    var!(
+        "--gx-glow-opacity",
+        c.gx_glow_opacity,
+        bc.map(|b| &b.gx_glow_opacity),
+        "0.6"
+    );
+    var!(
+        "--gx-glow-spread",
+        c.gx_glow_spread,
+        bc.map(|b| &b.gx_glow_spread),
+        "8px"
+    );
+
     // Syntax highlight tokens
     let base_syntax = base.map(|b| &b.syntax);
     let default_syntax = default_dark_syntax();
@@ -668,6 +737,11 @@ fn compile_css(theme: &ThemeFile, base: Option<&ThemeFile>) -> String {
         body_rules.push_str(
             ".content-panel h1, .content-panel h2, .content-panel h3 { background: none !important; -webkit-background-clip: unset !important; -webkit-text-fill-color: unset !important; background-clip: unset !important; }\n"
         );
+    }
+
+    let gx_border = e.gx_border.or(be.and_then(|b| b.gx_border)).unwrap_or(true);
+    if !gx_border {
+        body_rules.push_str(".gx-border { display: none !important; }\n");
     }
 
     if let Some(opacity) = e.noise_opacity.or(be.and_then(|b| b.noise_opacity)) {

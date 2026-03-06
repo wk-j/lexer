@@ -174,6 +174,7 @@ fn main() {
                 let window = app.get_webview_window("main").unwrap();
 
                 // Apply macOS vibrancy (frosted glass blur behind the window)
+                // and hide native traffic lights (replaced by custom vertical HTML buttons)
                 #[cfg(target_os = "macos")]
                 {
                     use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
@@ -184,6 +185,24 @@ fn main() {
                         None,
                     )
                     .expect("Failed to apply vibrancy");
+
+                    // Hide native traffic light buttons
+                    use objc2::runtime::AnyObject;
+                    use objc2_app_kit::NSWindowButton;
+                    let ns_window: *mut AnyObject = window.ns_window().unwrap().cast();
+                    unsafe {
+                        for button_type in [
+                            NSWindowButton::CloseButton,
+                            NSWindowButton::MiniaturizeButton,
+                            NSWindowButton::ZoomButton,
+                        ] {
+                            let btn: *mut AnyObject =
+                                objc2::msg_send![ns_window, standardWindowButton: button_type];
+                            if !btn.is_null() {
+                                let _: () = objc2::msg_send![btn, setHidden: true];
+                            }
+                        }
+                    }
                 }
 
                 // Resize window to fit screen height
@@ -254,10 +273,8 @@ fn main() {
                         if let Ok(cwd) = std::env::current_dir() {
                             let readme = cwd.join("README.md");
                             if readme.exists() {
-                                let _ = handle.emit(
-                                    "open-file-arg",
-                                    readme.to_string_lossy().into_owned(),
-                                );
+                                let _ = handle
+                                    .emit("open-file-arg", readme.to_string_lossy().into_owned());
                             }
                         }
                     } else {
