@@ -163,6 +163,7 @@ fn main() {
             commands::focus_window,
             commands::get_block_sources,
             commands::get_working_directory,
+            commands::open_config_in_editor,
             commands::discover_opencode,
             commands::send_to_opencode,
         ])

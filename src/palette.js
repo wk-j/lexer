@@ -300,6 +300,7 @@ class CommandPalette {
       { label: 'layout zen', detail: 'Fullscreen, no chrome', value: 'layout-zen', type: 'command' },
       { label: 'layout split', detail: 'Side-by-side with ToC', value: 'layout-split', type: 'command' },
       { label: 'new window', detail: 'Open a new empty window', value: 'new-window', type: 'command' },
+      { label: 'edit config', detail: 'Open config.toml in text editor', value: 'edit-config', type: 'command' },
     ];
   }
 
@@ -586,6 +587,9 @@ class CommandPalette {
         break;
       case 'new-window':
         invoke('new_window', { path: null }).catch(console.error);
+        break;
+      case 'edit-config':
+        invoke('open_config_in_editor').catch(console.error);
         break;
     }
   }

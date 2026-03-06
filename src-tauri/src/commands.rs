@@ -694,6 +694,66 @@ pub fn focus_window(app: AppHandle, window_id: String) -> Result<(), String> {
     Ok(())
 }
 
+// --- Configuration ---
+
+#[tauri::command]
+pub fn open_config_in_editor() -> Result<String, String> {
+    let path = LexerConfig::config_path();
+
+    // Ensure the config directory and file exist
+    if !path.exists() {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create config directory: {}", e))?;
+        }
+        // Write a default config with helpful comments
+        let default = concat!(
+            "# Lexer configuration\n",
+            "# See docs/SPEC.md for all options\n",
+            "\n",
+            "[appearance]\n",
+            "# theme = \"lexer-dark\"\n",
+            "# default_layout = \"default\"  # default, focus, zen, split\n",
+            "\n",
+            "[behavior]\n",
+            "# live_reload = true\n",
+            "# preserve_scroll = true\n",
+            "\n",
+            "[effects]\n",
+            "# enabled = true\n",
+        );
+        std::fs::write(&path, default)
+            .map_err(|e| format!("Failed to create config file: {}", e))?;
+    }
+
+    // Open in the OS default text editor
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg("-t")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open editor: {}", e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open editor: {}", e))?;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/c", "start", ""])
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open editor: {}", e))?;
+    }
+
+    Ok(path.to_string_lossy().into_owned())
+}
+
 // --- OpenCode integration ---
 
 #[tauri::command]

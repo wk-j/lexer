@@ -109,7 +109,7 @@ impl LexerConfig {
         }
     }
 
-    fn config_path() -> PathBuf {
+    pub fn config_path() -> PathBuf {
         dirs_config_dir().join("lexer").join("config.toml")
     }
 }
