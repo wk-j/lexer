@@ -164,6 +164,8 @@ fn main() {
             commands::get_block_sources,
             commands::get_working_directory,
             commands::open_config_in_editor,
+            commands::get_custom_commands,
+            commands::run_custom_command,
             commands::discover_opencode,
             commands::send_to_opencode,
         ])

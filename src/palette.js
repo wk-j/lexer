@@ -204,7 +204,7 @@ class CommandPalette {
         await this._loadFiles();
         break;
       case 'command':
-        this._loadCommands();
+        await this._loadCommands();
         break;
       case 'heading':
         await this._loadHeadings();
@@ -283,7 +283,7 @@ class CommandPalette {
     }
   }
 
-  _loadCommands() {
+  async _loadCommands() {
     this.items = [
       { label: 'toggle sidebar', detail: 'Show/hide ToC sidebar', value: 'toggle-sidebar', type: 'command' },
       { label: 'toggle effects', detail: 'Enable/disable visual effects', value: 'toggle-effects', type: 'command' },
@@ -302,6 +302,21 @@ class CommandPalette {
       { label: 'new window', detail: 'Open a new empty window', value: 'new-window', type: 'command' },
       { label: 'edit config', detail: 'Open config.toml in text editor', value: 'edit-config', type: 'command' },
     ];
+
+    // Append user-defined custom commands from config.toml
+    try {
+      const customCmds = await invoke('get_custom_commands');
+      for (const cmd of customCmds) {
+        this.items.push({
+          label: cmd.name,
+          detail: cmd.command,
+          value: cmd,
+          type: 'custom-command',
+        });
+      }
+    } catch (e) {
+      console.error('Failed to load custom commands:', e);
+    }
   }
 
   async _loadHeadings() {
@@ -524,6 +539,10 @@ class CommandPalette {
         this._runCommand(item.value);
         break;
 
+      case 'custom-command':
+        this._runCustomCommand(item.value);
+        break;
+
       case 'theme':
         if (window.lexerApp) {
           window.lexerApp.loadTheme(item.value);
@@ -592,6 +611,103 @@ class CommandPalette {
         invoke('open_config_in_editor').catch(console.error);
         break;
     }
+  }
+
+  // --- Custom Commands ---
+
+  async _runCustomCommand(cmd) {
+    try {
+      const expanded = await this._expandCommandPlaceholders(cmd.command);
+      const result = await invoke('run_custom_command', {
+        command: expanded,
+        workingDir: null,
+        outputMode: cmd.output || 'ignore',
+      });
+
+      if (result.success) {
+        switch (cmd.output) {
+          case 'clipboard':
+            if (result.stdout) {
+              await navigator.clipboard.writeText(result.stdout).catch(() => {});
+              this._showToast('Copied to clipboard');
+            } else {
+              this._showToast('No output to copy', true);
+            }
+            break;
+          case 'toast':
+            this._showToast(result.stdout.split('\n')[0] || `Ran: ${cmd.name}`);
+            break;
+          default:
+            this._showToast(`Ran: ${cmd.name}`);
+        }
+      } else {
+        const errMsg = result.stderr.split('\n')[0] || `Exit code ${result.exit_code}`;
+        this._showToast(`${cmd.name} failed: ${errMsg}`, true);
+      }
+    } catch (err) {
+      this._showToast(`${cmd.name}: ${err}`, true);
+    }
+  }
+
+  async _expandCommandPlaceholders(template) {
+    let result = template;
+
+    const filePath = await invoke('get_current_file').catch(() => '') || '';
+    const cwd = await invoke('get_working_directory').catch(() => '') || '';
+
+    // Derive path components
+    const parts = filePath.split('/');
+    const fileName = parts.pop() || '';
+    const dir = parts.join('/');
+    const dotIdx = fileName.lastIndexOf('.');
+    const fileStem = dotIdx > 0 ? fileName.substring(0, dotIdx) : fileName;
+    const fileExt = dotIdx > 0 ? fileName.substring(dotIdx + 1) : '';
+
+    // Absolute paths
+    const fileAbsolute = filePath && cwd ? `${cwd}/${filePath}` : filePath;
+    const dirAbsolute = dir && cwd ? `${cwd}/${dir}` : (cwd || dir);
+
+    result = result.replaceAll('{file_absolute}', fileAbsolute);
+    result = result.replaceAll('{file_name}', fileName);
+    result = result.replaceAll('{file_stem}', fileStem);
+    result = result.replaceAll('{file_ext}', fileExt);
+    result = result.replaceAll('{file}', filePath);
+    result = result.replaceAll('{dir_absolute}', dirAbsolute);
+    result = result.replaceAll('{dir}', dir);
+    result = result.replaceAll('{cwd}', cwd);
+
+    // Clipboard placeholder
+    if (result.includes('{clipboard}')) {
+      const clip = await navigator.clipboard.readText().catch(() => '');
+      result = result.replaceAll('{clipboard}', clip || '');
+    }
+
+    // Selection placeholder (from block select, if any)
+    if (result.includes('{selection}')) {
+      let selectionText = '';
+      const kb = window.lexerKeyboard;
+      if (kb && kb._selectBlocks) {
+        const indices = [...kb._getSelectedIndices()].sort((a, b) => a - b);
+        if (indices.length > 0) {
+          selectionText = await invoke('get_block_sources', { indices }).catch(() => '');
+        }
+      }
+      result = result.replaceAll('{selection}', selectionText || '');
+    }
+
+    return result;
+  }
+
+  _showToast(message, isError = false) {
+    const statusFile = document.getElementById('status-file');
+    if (!statusFile) return;
+    const original = statusFile.textContent;
+    statusFile.textContent = `${message} ${isError ? '\u2717' : '\u2713'}`;
+    if (isError) statusFile.style.color = '#f85149';
+    setTimeout(() => {
+      statusFile.textContent = original;
+      statusFile.style.color = '';
+    }, isError ? 4000 : 2000);
   }
 
   // --- Helpers ---

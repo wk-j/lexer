@@ -11,6 +11,25 @@ pub struct LexerConfig {
     pub behavior: BehaviorConfig,
     #[serde(default)]
     pub effects: EffectsConfig,
+    #[serde(default)]
+    pub commands: Vec<CustomCommand>,
+}
+
+/// A user-defined shell command with placeholder support.
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct CustomCommand {
+    pub name: String,
+    pub command: String,
+    #[serde(default = "default_output_mode")]
+    pub output: String,
+    #[serde(default)]
+    pub confirm: bool,
+    pub working_dir: Option<String>,
+    pub shell: Option<String>,
+}
+
+fn default_output_mode() -> String {
+    "ignore".to_string()
 }
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone)]

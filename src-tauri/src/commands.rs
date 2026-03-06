@@ -754,6 +754,89 @@ pub fn open_config_in_editor() -> Result<String, String> {
     Ok(path.to_string_lossy().into_owned())
 }
 
+// --- Custom Commands ---
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CustomCommandInfo {
+    pub name: String,
+    pub command: String,
+    pub output: String,
+    pub confirm: bool,
+}
+
+/// Return the list of user-defined custom commands from config.toml.
+/// Re-reads the config each time so edits are picked up without restart.
+#[tauri::command]
+pub fn get_custom_commands() -> Result<Vec<CustomCommandInfo>, String> {
+    let config = LexerConfig::load();
+    Ok(config
+        .commands
+        .into_iter()
+        .map(|c| CustomCommandInfo {
+            name: c.name,
+            command: c.command,
+            output: c.output,
+            confirm: c.confirm,
+        })
+        .collect())
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CustomCommandResult {
+    pub success: bool,
+    pub stdout: String,
+    pub stderr: String,
+    pub exit_code: Option<i32>,
+}
+
+/// Execute an expanded custom command string via the system shell.
+/// Placeholder expansion is done on the frontend before calling this.
+#[tauri::command]
+pub async fn run_custom_command(
+    command: String,
+    working_dir: Option<String>,
+    _output_mode: String,
+) -> Result<CustomCommandResult, String> {
+    let cwd = working_dir
+        .map(PathBuf::from)
+        .or_else(|| std::env::current_dir().ok())
+        .unwrap_or_else(|| PathBuf::from("."));
+
+    let output = tauri::async_runtime::spawn_blocking(move || {
+        #[cfg(unix)]
+        {
+            std::process::Command::new("sh")
+                .args(["-c", &command])
+                .current_dir(&cwd)
+                .output()
+        }
+        #[cfg(windows)]
+        {
+            std::process::Command::new("cmd")
+                .args(["/c", &command])
+                .current_dir(&cwd)
+                .output()
+        }
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+    .map_err(|e| format!("Failed to run command: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    let exit_code = output.status.code();
+    let success = output.status.success();
+
+    // For clipboard mode, the frontend handles copying stdout
+    // For toast mode, the frontend shows stdout's first line
+    Ok(CustomCommandResult {
+        success,
+        stdout: stdout.trim().to_string(),
+        stderr: stderr.trim().to_string(),
+        exit_code,
+    })
+}
+
 // --- OpenCode integration ---
 
 #[tauri::command]
