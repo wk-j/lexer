@@ -1,78 +1,114 @@
 # Custom Theme System
 
-Lexer ships with built-in themes and supports fully user-defined themes. Themes control colors, typography, syntax highlighting, and visual effects from a single TOML file.
+Lexer ships with 5 built-in themes and supports fully user-defined themes. Themes control colors, typography, syntax highlighting, and visual effects from a single TOML file.
+
+## Quick Start
+
+Create `~/.config/lexer/themes/my-theme.toml`:
+
+```toml
+[meta]
+name = "My Theme"
+base = "dark"
+
+[colors]
+accent = "#ff6b6b"
+link = "#ff6b6b"
+```
+
+That's it. Every field is optional -- missing values inherit from the base theme (`lexer-dark` or `lexer-light`). Select the theme with `Space t` in the app or `lexer --theme my-theme`.
+
+The file is hot-reloaded: save the TOML and the app updates instantly.
+
+## Built-in Themes
+
+| Theme Name        | Base  | Description                                   |
+|-------------------|-------|-----------------------------------------------|
+| `lexer-dark`      | dark  | Default. Deep navy, frosted glass, blue accent |
+| `lexer-light`     | light | Clean white, soft shadows, GitHub-style        |
+| `lexer-mono`      | dark  | Monochrome grayscale, no color accents         |
+| `lexer-solarized` | dark  | Solarized palette                              |
+| `lexer-nord`      | dark  | Nord color palette                             |
 
 ## Theme Architecture
 
 ```
-Theme Resolution Order:
-1. User-selected theme (from config or CLI --theme)
-2. System preference (auto: light/dark based on OS setting)
-3. Default built-in theme ("lexer-dark")
+Theme Resolution:
+  CLI --theme  >  config.toml theme  >  "lexer-dark" (default)
 
 Theme Loading:
-  TOML file  -->  Rust ThemeEngine  -->  CSS custom properties  -->  Webview
+  TOML file  -->  Rust ThemeEngine  -->  CSS :root block  -->  Webview <style>
                       |
-                      +--> validate & merge with defaults
+                      +--> merge with base theme defaults
+
+File Lookup Order:
+  1. ~/.config/lexer/themes/{name}.toml      (user themes)
+  2. $LEXER_THEMES_DIR/{name}.toml           (env override)
+  3. Built-in themes (embedded in binary)
 ```
 
-A theme is a TOML file that maps to CSS custom properties. The Rust backend parses the TOML, validates it, fills in any missing values from the default theme, and generates a CSS `:root` block that is injected into the webview.
+A theme is a TOML file that maps to CSS custom properties. The Rust backend parses the TOML, fills missing values from the base theme, and generates a `:root {}` CSS block injected into the webview. The frontend CSS references only custom properties -- never hardcoded colors -- so theme switching is instantaneous.
 
-## Built-in Themes
+## Complete Theme File Format
 
-| Theme Name       | Style      | Description                                    |
-| ---------------- | ---------- | ---------------------------------------------- |
-| `lexer-dark`     | Dark       | Default. Deep navy backdrop, frosted panels    |
-| `lexer-light`    | Light      | Clean white, subtle gray panels, soft shadows  |
-| `lexer-mono`     | Dark       | Monochrome grayscale, no color accents         |
-| `lexer-solarized`| Dark/Light | Solarized palette, both variants               |
-| `lexer-nord`     | Dark       | Nord color palette                              |
-
-## Theme File Format
-
-Themes are defined in TOML. Every field is optional -- missing values inherit from the base theme (`lexer-dark` or `lexer-light` depending on `base`).
+Below is every field the theme engine currently supports. Copy this as a starting point and remove what you don't need.
 
 ```toml
-# ~/.config/lexer/themes/my-theme.toml
-
 [meta]
-name = "My Custom Theme"
-author = "Your Name"
-base = "dark"                    # "dark" or "light" -- inherit missing values from this base
-version = "1.0.0"
+name = "My Custom Theme"       # Display name in theme picker
+author = "Your Name"            # Optional
+base = "dark"                   # "dark" or "light" -- inherit missing values from this
+version = "1.0.0"               # Optional
 
 [colors]
 # App chrome
-bg_base = "#0d1117"              # Outermost background
-bg_panel = "rgba(22, 27, 34, 0.85)"  # Content panel (supports alpha for glass effect)
-bg_panel_border = "rgba(255, 255, 255, 0.08)"
+bg_base = "transparent"                     # Outermost background (use transparent for vibrancy)
+bg_base_opaque = "#0d1117"                  # Opaque fallback (used for text-on-accent contexts)
+bg_panel = "rgba(22, 27, 34, 0.55)"        # Content panel (supports alpha for glass effect)
+bg_panel_border = "rgba(255, 255, 255, 0.10)"
 text_primary = "#e6edf3"
 text_secondary = "#8b949e"
 text_muted = "#484f58"
-accent = "#58a6ff"
+accent = "#58a6ff"                          # Primary accent (buttons, active states)
 link = "#58a6ff"
 link_hover = "#79c0ff"
 
-# Gradient mesh backdrop (up to 3 gradient stops)
-gradient_a = "rgba(88, 166, 255, 0.15)"
-gradient_b = "rgba(136, 87, 229, 0.12)"
-gradient_c = "rgba(63, 185, 80, 0.10)"
+# Gradient mesh backdrop (3 radial gradient layers behind content)
+gradient_a = "rgba(88, 166, 255, 0.08)"
+gradient_b = "rgba(210, 168, 255, 0.06)"
+gradient_c = "rgba(126, 231, 135, 0.05)"
 
-# Element-specific
-blockquote_border = "linear-gradient(180deg, #58a6ff, #8957e5)"
-blockquote_bg = "rgba(56, 139, 253, 0.06)"
-hr_color = "linear-gradient(90deg, transparent, #30363d, transparent)"
+# Code blocks
+code_bg = "rgba(22, 27, 34, 0.45)"
+code_border = "rgba(255, 255, 255, 0.08)"
+glow_color = "rgba(88, 166, 255, 0.25)"    # Ambient glow around code blocks on hover
+glow_radius = "20px"
+
+# Content elements
+blockquote_border = "#58a6ff"
+blockquote_bg = "rgba(56, 139, 253, 0.08)"
+hr_color = "rgba(48, 54, 61, 0.6)"
 table_header_bg = "rgba(110, 118, 129, 0.12)"
-table_row_alt_bg = "rgba(110, 118, 129, 0.04)"
+table_border = "rgba(110, 118, 129, 0.15)"
+table_row_alt = "rgba(110, 118, 129, 0.04)"
 
-[colors.code_block]
-bg = "#161b22"
-border = "rgba(255, 255, 255, 0.06)"
-glow_color = "rgba(88, 166, 255, 0.08)"  # Ambient glow around code blocks
-glow_radius = "40px"
+# Cursor spotlight (radial glow following mouse)
+spotlight_color = "rgba(255, 255, 255, 0.02)"
+
+# Heading gradient text fill (used when heading_gradient_text = true)
+heading_gradient = "linear-gradient(135deg, var(--accent), var(--text-primary))"
+
+# Block select mode indicator
+select_bar = "var(--accent)"                # Left bar color for selected blocks
+select_bg = "rgba(88, 166, 255, 0.08)"     # Background tint for selected blocks
+select_cursor_bar = "var(--text-primary)"   # Left bar color for cursor block
+select_cursor_bg = "rgba(88, 166, 255, 0.15)"  # Background for cursor block
+select_bar_width = "3px"                    # Width of selection indicator bar
+select_bar_offset = "-16px"                 # Horizontal offset (negative = in gutter)
 
 [syntax]
-# Tree-sitter highlight token -> color mapping
+# Tree-sitter highlight token colors
+# These map to .hl-{token} CSS classes in code blocks
 keyword = "#ff7b72"
 string = "#a5d6ff"
 comment = "#8b949e"
@@ -86,162 +122,156 @@ constant = "#79c0ff"
 tag = "#7ee787"
 attribute = "#79c0ff"
 property = "#79c0ff"
-# Any unrecognized keys are passed through as .highlight-{key} CSS classes
+constructor = "#ffa657"
+embedded = "#e6edf3"
+# Any extra keys are passed through as --hl-{key} CSS variables
 
 [typography]
+# All fields optional -- only emitted if set
 font_family = "system-ui, -apple-system, 'Segoe UI', sans-serif"
 font_family_mono = "'SF Mono', 'Fira Code', 'JetBrains Mono', monospace"
-font_size = 16                   # px, base body font size
-line_height = 1.6
-code_font_size = 14              # px, code block font size
-code_line_height = 1.5
-heading_weight = 700
-heading_letter_spacing = "-0.02em"
-
-# Optional: per-heading size scale (rem relative to font_size)
-h1_size = "2.0"
-h2_size = "1.5"
-h3_size = "1.25"
-h4_size = "1.1"
-h5_size = "1.0"
-h6_size = "0.9"
+font_size = 16          # px
+line_height = 1.7
+code_font_size = 14     # px
 
 [effects]
-frosted_glass = true
-frosted_blur = "20px"
-frosted_saturate = "180%"
-gradient_backdrop = true
-noise_texture = true
-noise_opacity = 0.03
-ambient_glow = true
-scroll_animations = true
-transition_duration = 300        # ms
-heading_gradient_text = false    # gradient fill on headings
-image_hover_zoom = 1.02          # scale factor on hover (1.0 = disabled)
+# Boolean toggles
+frosted_glass = true            # Backdrop blur on panels
+gradient_backdrop = true        # Gradient mesh background
+noise_texture = true            # Noise overlay
+heading_gradient_text = true    # Gradient fill on h1-h3
+scroll_animations = true        # Fade-in on scroll (read by JS, not emitted as CSS)
+
+# Tuning
+frosted_blur = "20px"           # Blur radius for frosted glass
+frosted_saturate = "180%"       # Saturation boost for frosted glass
+noise_opacity = 0.035           # Noise texture opacity (0.0 - 1.0)
 ```
+
+## CSS Custom Property Reference
+
+Every field above maps to a CSS custom property. The table below shows the exact mapping, TOML field name, and the hardcoded default used when neither the theme nor its base defines a value.
+
+### Colors
+
+| TOML Field | CSS Variable | Default (dark) |
+|---|---|---|
+| `bg_base` | `--bg-base` | `transparent` |
+| `bg_base_opaque` | `--bg-base-opaque` | `#0d1117` |
+| `bg_panel` | `--panel-bg` | `rgba(22, 27, 34, 0.55)` |
+| `bg_panel_border` | `--panel-border` | `rgba(255, 255, 255, 0.10)` |
+| `text_primary` | `--text-primary` | `#e6edf3` |
+| `text_secondary` | `--text-secondary` | `#8b949e` |
+| `text_muted` | `--text-muted` | `#484f58` |
+| `accent` | `--accent` | `#58a6ff` |
+| `link` | `--link` | `#58a6ff` |
+| `link_hover` | `--link-hover` | `#79c0ff` |
+| `gradient_a` | `--gradient-a` | `rgba(88, 166, 255, 0.08)` |
+| `gradient_b` | `--gradient-b` | `rgba(210, 168, 255, 0.06)` |
+| `gradient_c` | `--gradient-c` | `rgba(126, 231, 135, 0.05)` |
+| `code_bg` | `--code-bg` | `rgba(22, 27, 34, 0.45)` |
+| `code_border` | `--code-border` | `rgba(255, 255, 255, 0.08)` |
+| `glow_color` | `--glow-color` | `rgba(88, 166, 255, 0.25)` |
+| `glow_radius` | `--glow-radius` | `20px` |
+| `blockquote_border` | `--blockquote-border` | `#58a6ff` |
+| `blockquote_bg` | `--blockquote-bg` | `rgba(56, 139, 253, 0.08)` |
+| `hr_color` | `--hr-color` | `rgba(48, 54, 61, 0.6)` |
+| `table_header_bg` | `--table-header-bg` | `rgba(110, 118, 129, 0.12)` |
+| `table_border` | `--table-border` | `rgba(110, 118, 129, 0.15)` |
+| `table_row_alt` | `--table-row-alt` | `rgba(110, 118, 129, 0.04)` |
+| `spotlight_color` | `--spotlight-color` | `rgba(255, 255, 255, 0.02)` |
+| `heading_gradient` | `--heading-gradient` | `linear-gradient(135deg, var(--accent), var(--text-primary))` |
+| `select_bar` | `--select-bar` | `var(--accent)` |
+| `select_bg` | `--select-bg` | `rgba(88, 166, 255, 0.08)` |
+| `select_cursor_bar` | `--select-cursor-bar` | `var(--text-primary)` |
+| `select_cursor_bg` | `--select-cursor-bg` | `rgba(88, 166, 255, 0.15)` |
+| `select_bar_width` | `--select-bar-width` | `3px` |
+| `select_bar_offset` | `--select-bar-offset` | `-16px` |
+
+### Syntax Tokens
+
+| TOML Field | CSS Variable | Default (dark) |
+|---|---|---|
+| `keyword` | `--hl-keyword` | `#ff7b72` |
+| `string` | `--hl-string` | `#a5d6ff` |
+| `comment` | `--hl-comment` | `#8b949e` |
+| `function` | `--hl-function` | `#d2a8ff` |
+| `type` | `--hl-type` | `#79c0ff` |
+| `number` | `--hl-number` | `#79c0ff` |
+| `operator` | `--hl-operator` | `#79c0ff` |
+| `variable` | `--hl-variable` | `#ffa657` |
+| `punctuation` | `--hl-punctuation` | `#8b949e` |
+| `constant` | `--hl-constant` | `#79c0ff` |
+| `tag` | `--hl-tag` | `#7ee787` |
+| `attribute` | `--hl-attribute` | `#79c0ff` |
+| `property` | `--hl-property` | `#79c0ff` |
+| `constructor` | `--hl-constructor` | `#ffa657` |
+| `embedded` | `--hl-embedded` | `#e6edf3` |
+| `unknown` | `--hl-unknown` | `#e6edf3` |
+| *any key* | `--hl-{key}` | *(passed through)* |
+
+### Typography
+
+Only emitted when explicitly set (no hardcoded defaults).
+
+| TOML Field | CSS Variable | Type |
+|---|---|---|
+| `font_family` | `--font-family` | string |
+| `font_family_mono` | `--font-family-mono` | string |
+| `font_size` | `--font-size` | integer → `{N}px` |
+| `line_height` | `--line-height` | float |
+| `code_font_size` | `--code-font-size` | integer → `{N}px` |
+
+### Effects
+
+| TOML Field | CSS Variable / Rule | Type | Default |
+|---|---|---|---|
+| `frosted_blur` | `--blur` | string | *(from base)* |
+| `frosted_saturate` | `--saturate` | string | *(from base)* |
+| `frosted_glass` | body rule: `--blur: 0px; --saturate: 100%` when false | bool | `true` |
+| `gradient_backdrop` | hides `.app-backdrop` when false | bool | `true` |
+| `noise_texture` | hides `.noise-overlay` when false | bool | `true` |
+| `noise_opacity` | `.noise-overlay { opacity }` | float | *(from base)* |
+| `heading_gradient_text` | removes gradient text from h1-h3 when false | bool | `true` |
+| `scroll_animations` | read by JS, not emitted as CSS | bool | *(from base)* |
+
+## Value Precedence
+
+For every field, the engine resolves values in this order:
+
+1. **Theme file value** — the field in your TOML
+2. **Base theme value** — the same field from `lexer-dark.toml` or `lexer-light.toml` (based on `meta.base`)
+3. **Hardcoded default** — compiled into the engine (shown in the tables above)
+
+This means you only need to override what you want to change.
+
+## Tips
+
+- **Start minimal.** Set `base = "dark"` or `base = "light"`, then override just `accent` and `link` for a quick custom look.
+- **Use `var()` references.** Fields like `select_bar` can reference other variables: `select_bar = "var(--accent)"`.
+- **Alpha values work everywhere.** Use `rgba()` for glass-like panels: `bg_panel = "rgba(30, 40, 60, 0.5)"`.
+- **Extra syntax tokens.** Any key in `[syntax]` not in the default list is emitted as `--hl-{key}` -- useful if you add custom tree-sitter highlights.
+- **Disable effects.** Set `gradient_backdrop = false` and `frosted_glass = false` for a flat look with no blur.
+- **Hot-reload.** Save your TOML and the app picks up changes immediately (only for the active theme).
 
 ## Theme Engine (Rust)
 
-```rust
-/// Parsed and validated theme
-#[derive(Debug, Deserialize)]
-struct Theme {
-    meta: ThemeMeta,
-    colors: ThemeColors,
-    syntax: HashMap<String, String>,
-    typography: ThemeTypography,
-    effects: ThemeEffects,
-}
+Source: `src-tauri/src/theme/engine.rs`
 
-/// Compile theme to a CSS string of custom properties
-impl Theme {
-    fn to_css(&self) -> String {
-        let mut css = String::from(":root {\n");
-        // colors
-        css.push_str(&format!("  --bg-base: {};\n", self.colors.bg_base));
-        css.push_str(&format!("  --panel-bg: {};\n", self.colors.bg_panel));
-        // ... all color tokens ...
+Key types:
+- `ThemeFile` — deserialized TOML structure (all fields `Option<T>`)
+- `ThemeMeta` — name, author, base, version
+- `ThemeColors` — 30 color fields
+- `ThemeTypography` — 5 typography fields
+- `ThemeEffects` — 8 effect fields
+- `ThemeEngine` — file discovery, loading, compilation
+- `compile_css()` — merges theme + base + defaults → CSS string
 
-        // syntax highlight colors
-        for (token, color) in &self.syntax {
-            css.push_str(&format!("  --hl-{}: {};\n", token, color));
-        }
+Tauri commands:
+- `list_themes` — scan built-in + user directories, return `ThemeInfo`
+- `load_theme(name)` — resolve, parse, merge, compile, return CSS + meta
+- `get_active_theme` — return current active theme name
 
-        // typography
-        css.push_str(&format!("  --font-family: {};\n", self.typography.font_family));
-        css.push_str(&format!("  --font-size: {}px;\n", self.typography.font_size));
-        // ... all typography tokens ...
+## Hot-Reload
 
-        // effects
-        css.push_str(&format!("  --blur: {};\n", self.effects.frosted_blur));
-        css.push_str(&format!("  --transition-ms: {}ms;\n", self.effects.transition_duration));
-        // ...
-
-        css.push_str("}\n");
-        css
-    }
-}
-```
-
-## Theme Resolution & Loading
-
-```
-Lookup order for theme files:
-1. ~/.config/lexer/themes/{name}.toml      (user themes)
-2. $LEXER_THEMES_DIR/{name}.toml           (env override)
-3. Built-in themes (embedded in binary)
-```
-
-```rust
-#[tauri::command]
-fn list_themes() -> Vec<ThemeInfo> {
-    // Scan built-in + user theme directories
-    // Return name, author, base (dark/light), path
-}
-
-#[tauri::command]
-fn load_theme(name: String) -> Result<String, String> {
-    // 1. Resolve theme file
-    // 2. Parse TOML
-    // 3. Merge with base defaults
-    // 4. Validate
-    // 5. Return compiled CSS string
-}
-
-#[tauri::command]
-fn get_theme_config(name: String) -> Result<Theme, String> {
-    // Return the full parsed theme for a theme editor/preview UI
-}
-```
-
-## Theme Hot-Reload
-
-User theme files in `~/.config/lexer/themes/` are watched with `notify`. When a `.toml` theme file is modified and it is the currently active theme, the app automatically recompiles and re-injects the CSS -- no restart needed.
-
-```rust
-// Watch themes directory for changes
-fn watch_themes(themes_dir: &Path, app_handle: AppHandle) {
-    let mut watcher = notify::recommended_watcher(move |event| {
-        if is_toml_modify(&event) {
-            if let Ok(css) = recompile_active_theme() {
-                app_handle.emit("theme-updated", css).ok();
-            }
-        }
-    });
-    watcher.watch(themes_dir, RecursiveMode::NonRecursive);
-}
-```
-
-## CSS Custom Property Mapping
-
-The frontend CSS references **only** custom properties -- never hard-coded colors. This makes theme switching instantaneous (swap the `:root` variables).
-
-```css
-/* All styles reference variables */
-body {
-    font-family: var(--font-family);
-    font-size: var(--font-size);
-    line-height: var(--line-height);
-    color: var(--text-primary);
-}
-
-.app-backdrop {
-    background:
-        radial-gradient(ellipse at 20% 50%, var(--gradient-a) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 20%, var(--gradient-b) 0%, transparent 50%),
-        radial-gradient(ellipse at 50% 80%, var(--gradient-c) 0%, transparent 50%),
-        var(--bg-base);
-}
-
-.content-panel {
-    background: var(--panel-bg);
-    border: 1px solid var(--panel-border);
-    backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
-}
-
-pre code .highlight-keyword    { color: var(--hl-keyword); }
-pre code .highlight-string     { color: var(--hl-string); }
-pre code .highlight-comment    { color: var(--hl-comment); font-style: italic; }
-pre code .highlight-function   { color: var(--hl-function); }
-/* ... all syntax tokens ... */
-```
+User themes in `~/.config/lexer/themes/` are watched with `notify`. When a `.toml` file is modified and it is the currently active theme, the engine recompiles and emits a `theme-updated` event. The frontend swaps the `<style>` block — no restart needed.
