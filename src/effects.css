@@ -80,17 +80,8 @@
   transform: scale(1.005);
 }
 
-/* Scroll shadows for overflowing code blocks */
-.content-panel pre code {
-  background:
-    linear-gradient(var(--code-bg) 30%, transparent) center top,
-    linear-gradient(transparent, var(--code-bg) 70%) center bottom,
-    radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.12), transparent) center top,
-    radial-gradient(farthest-side at 50% 100%, rgba(0, 0, 0, 0.12), transparent) center bottom;
-  background-repeat: no-repeat;
-  background-size: 100% 40px, 100% 40px, 100% 10px, 100% 10px;
-  background-attachment: local, local, scroll, scroll;
-}
+/* Scroll shadows removed from pre code to avoid double-background
+   with semi-transparent --code-bg stacking on the <pre> behind it. */
 
 /* Focus dim: dim surrounding content when hovering a code block */
 .content-panel:has(pre:hover) > *:not(pre:hover) {
