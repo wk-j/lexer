@@ -9,7 +9,7 @@ The `;` key works from normal mode without any selection. With block select, the
 
 ## OpenCode
 
-Lexer integrates with [OpenCode](https://github.com/nicholasgriffintn/opencode) to send prompts to a running AI coding agent. The integration is fully automatic — Lexer discovers a running OpenCode instance in the same working directory, with no manual configuration required.
+Lexer integrates with [OpenCode](https://github.com/anomalyco/opencode) to send prompts to a running AI coding agent. The integration is fully automatic — Lexer discovers a running OpenCode instance in the same working directory, with no manual configuration required.
 
 ## Overview
 
