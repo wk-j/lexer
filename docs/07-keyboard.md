@@ -12,6 +12,7 @@ Lexer implements a full modal keyboard navigation system inspired by the [Helix 
 | **Search** | `/ ...`     | Text search within rendered content              | `/` in Normal     | `Escape` or `Enter` |
 | **View**   | `VIW`       | Viewport adjustments (center, top, zoom)         | `z` in Normal     | After action or `Escape` |
 | **Hint**   | `HNT`       | Vimium-style link jump with letter labels        | `g w` in Normal   | After jump or `Escape` |
+| **Select** | `SEL`       | Structural block selection for copy / AI context | `v` in Normal     | Action or `Escape` |
 
 The current mode is displayed in the status bar. Unrecognized keys in any mode are ignored (no accidental actions).
 
@@ -60,6 +61,8 @@ The current mode is displayed in the status bar. Unrecognized keys in any mode a
 | `Ctrl+o` | Previous buffer (Helix jumplist style)        |
 | `Ctrl+i` | Next buffer (Helix jumplist style)            |
 | `q`   | Quit (close current window)                      |
+| `v`   | Enter **block select** mode (see [16-block-select.md](16-block-select.md)) |
+| `V`   | Enter block select — select current section      |
 | `?`   | Show full keymap help overlay                    |
 
 ## Goto Mode (`g`)

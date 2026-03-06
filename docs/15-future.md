@@ -9,3 +9,4 @@
 - **Session persistence**: Save and restore window arrangements across restarts
 - **Tabs within windows**: Optional tabbed interface as alternative to separate windows
 - **Custom keymap file**: Full user-defined keymap remapping via config
+- **Block Select mode**: Structural content selection for copy and AI context — see [16-block-select.md](16-block-select.md)
