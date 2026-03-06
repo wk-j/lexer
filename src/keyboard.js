@@ -66,6 +66,7 @@ class KeyboardEngine {
         ' ':      { mode: 'space' },
         'z':      { mode: 'view' },
         '/':      { mode: 'search' },
+        ';':      { mode: 'ai' },
       },
 
       goto: {
@@ -107,6 +108,11 @@ class KeyboardEngine {
         's':  { fn: () => this._toggleToc() },
         'e':  { fn: () => this._toggleEffects() },
         'l':  { fn: () => this._toggleLineNumbers() },
+      },
+
+      ai: {
+        'o':  { fn: () => this._enterAIPrompt('opencode') },
+        'c':  { fn: () => this._enterAIPrompt('claude') },
       },
 
       view: {
@@ -178,6 +184,13 @@ class KeyboardEngine {
           ['b', 'toggle status bar'],
         ],
       },
+      ai: {
+        title: '; - AI Agent',
+        keys: [
+          ['o', 'send to OpenCode'],
+          ['c', 'send to Claude'],
+        ],
+      },
       view: {
         title: 'z - View',
         keys: [
@@ -209,10 +222,10 @@ class KeyboardEngine {
       'select:agent': {
         title: '\u21B5 - Agent',
         keys: [
-          ['c', 'copy as context block'],
-          ['o', 'open in Claude'],
+          ['o', 'send to OpenCode'],
+          ['c', 'send to Claude'],
+          ['y', 'copy as context block'],
           ['p', 'pipe to command'],
-          ['u', 'send to URL endpoint'],
           ['esc', 'back to select'],
         ],
       },
@@ -235,6 +248,12 @@ class KeyboardEngine {
     // Search mode has special handling
     if (this.mode === 'search') {
       this._handleSearchKey(e);
+      return;
+    }
+
+    // AI prompt mode has special handling
+    if (this.mode === 'ai-prompt') {
+      this._handleAIPromptKey(e);
       return;
     }
 
@@ -324,7 +343,7 @@ class KeyboardEngine {
     } else if (action.fn) {
       action.fn();
       // Return to normal after action in sub-modes
-      if (this.mode !== 'normal' && this.mode !== 'search' && this.mode !== 'hint' && this.mode !== 'select') {
+      if (this.mode !== 'normal' && this.mode !== 'search' && this.mode !== 'hint' && this.mode !== 'select' && this.mode !== 'ai-prompt') {
         this.setMode('normal');
       }
     }
@@ -1203,6 +1222,12 @@ class KeyboardEngine {
       return;
     }
 
+    // AI prompt sub-mode (from agent → o/c)
+    if (this._selectSubMode === 'ai-prompt') {
+      this._handleAIPromptKey(e);
+      return;
+    }
+
     e.preventDefault();
     const key = e.key;
 
@@ -1531,47 +1556,194 @@ class KeyboardEngine {
         this._updateModeBadge();
         this._updateSelectStatus();
         break;
-      case 'c':
-        this._selectCopyContext();
-        break;
       case 'o':
-        this._selectOpenClaude();
+        this._enterAIPrompt('opencode', true);
+        break;
+      case 'c':
+        this._enterAIPrompt('claude', true);
+        break;
+      case 'y':
+        this._selectCopyContext();
         break;
       case 'p':
         this._enterPipePrompt();
-        break;
-      case 'u':
-        this._selectSendUrl();
         break;
       default:
         break;
     }
   }
 
-  async _selectOpenClaude() {
-    const indices = [...this._getSelectedIndices()].sort((a, b) => a - b);
-    if (indices.length === 0) return;
+  // --- AI Prompt Dialog ---
+  // Shared prompt input for ;o / ;c (normal mode) and agent o/c (select mode).
+  // Supports @selection and @path placeholder expansion.
 
+  _enterAIPrompt(target, fromSelect = false) {
+    this._aiTarget = target;         // 'opencode' or 'claude'
+    this._aiFromSelect = fromSelect; // true if entered from select/agent sub-mode
+
+    if (fromSelect) {
+      this._selectSubMode = 'ai-prompt';
+    } else {
+      this.mode = 'ai-prompt';
+      document.documentElement.dataset.mode = 'ai-prompt';
+    }
+
+    this._hideWhichKey();
+
+    // Reuse search bar for prompt input
+    if (this.searchBar) {
+      this.searchBar.classList.add('visible');
+      const label = this.searchBar.querySelector('.search-label');
+      if (label) label.textContent = target === 'opencode' ? 'OC' : 'CL';
+    }
+    if (this.searchInput) {
+      // Pre-fill with @selection if blocks are selected
+      const hasSelection = this._selectBlocks && this._getSelectedIndices().size > 0;
+      this.searchInput.value = hasSelection ? '@selection' : '';
+      this.searchInput.placeholder = `Prompt for ${target === 'opencode' ? 'OpenCode' : 'Claude'}...`;
+      this.searchInput.focus();
+    }
+    if (this.modeBadge) {
+      this.modeBadge.textContent = target === 'opencode' ? 'OC' : 'CL';
+    }
+  }
+
+  _handleAIPromptKey(e) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      this._exitAIPrompt();
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const prompt = this.searchInput?.value?.trim();
+      if (prompt) {
+        this._submitAIPrompt(prompt);
+      }
+      return;
+    }
+    // Let input handle all other typing
+  }
+
+  _exitAIPrompt() {
+    // Restore search bar
+    if (this.searchBar) {
+      this.searchBar.classList.remove('visible');
+      const label = this.searchBar.querySelector('.search-label');
+      if (label) label.textContent = '/';
+    }
+    if (this.searchInput) {
+      this.searchInput.value = '';
+      this.searchInput.placeholder = 'Search...';
+      this.searchInput.blur();
+    }
+
+    if (this._aiFromSelect) {
+      // Return to agent sub-mode
+      this._selectSubMode = 'agent';
+      this._showWhichKey('select:agent');
+      this._updateModeBadge();
+    } else {
+      this.setMode('normal');
+    }
+    this._aiTarget = null;
+    this._aiFromSelect = false;
+  }
+
+  async _submitAIPrompt(rawPrompt) {
+    const target = this._aiTarget;
+    const fromSelect = this._aiFromSelect;
+
+    // Close the prompt UI first
+    if (this.searchBar) this.searchBar.classList.remove('visible');
+    if (this.searchInput) {
+      this.searchInput.value = '';
+      this.searchInput.placeholder = 'Search...';
+      this.searchInput.blur();
+    }
+
+    // Expand placeholders
+    let prompt = rawPrompt;
     try {
-      const source = await invoke('get_block_sources', { indices });
-      const filePath = await invoke('get_current_file') || 'unknown';
-      const blockRange = indices.length === 1 ? `${indices[0]}` : `${indices[0]}-${indices[indices.length - 1]}`;
-      const context = `<context source="${filePath}" blocks="${blockRange}">\n${source}\n</context>`;
-      const encoded = encodeURIComponent(context);
-      const url = `claude://context?text=${encoded}`;
+      prompt = await this._expandPlaceholders(rawPrompt);
+    } catch (err) {
+      this._showSelectToast(`Placeholder error: ${err}`, true);
+      if (fromSelect) this._exitSelectMode();
+      else this.setMode('normal');
+      return;
+    }
 
-      try {
-        await invoke('plugin:shell|open', { path: url });
-        this._showSelectToast('Sent to Claude');
-      } catch (_) {
-        // Fallback: copy to clipboard
-        await this._writeClipboard(context);
-        this._showSelectToast('Claude not found \u2014 copied to clipboard');
+    // Dispatch to target
+    try {
+      if (target === 'opencode') {
+        await this._sendToOpenCode(prompt);
+      } else if (target === 'claude') {
+        await this._sendToClaude(prompt);
       }
     } catch (err) {
-      this._showSelectToast(`Failed: ${err}`, true);
+      this._showSelectToast(`${err}`, true);
     }
-    this._exitSelectMode();
+
+    // Clean up mode
+    if (fromSelect) {
+      this._exitSelectMode();
+    } else {
+      this.setMode('normal');
+    }
+    this._aiTarget = null;
+    this._aiFromSelect = false;
+  }
+
+  async _expandPlaceholders(prompt) {
+    let result = prompt;
+
+    // Expand @selection → context block with path and source
+    if (result.includes('@selection')) {
+      let selectionText = '';
+      if (this._selectBlocks) {
+        const indices = [...this._getSelectedIndices()].sort((a, b) => a - b);
+        if (indices.length > 0) {
+          const source = await invoke('get_block_sources', { indices });
+          const filePath = await invoke('get_current_file') || 'unknown';
+          const blockRange = indices.length === 1
+            ? `${indices[0]}`
+            : `${indices[0]}-${indices[indices.length - 1]}`;
+          selectionText = `[context: ${filePath} blocks ${blockRange}]\n\n${source}`;
+        }
+      }
+      result = result.replaceAll('@selection', selectionText);
+    }
+
+    // Expand @path → relative file path
+    if (result.includes('@path')) {
+      const filePath = await invoke('get_current_file') || '';
+      result = result.replaceAll('@path', filePath);
+    }
+
+    return result;
+  }
+
+  async _sendToOpenCode(prompt) {
+    const result = await invoke('send_to_opencode', { prompt });
+    if (result.success) {
+      this._showSelectToast('Sent to OpenCode');
+    } else {
+      this._showSelectToast(result.message, true);
+    }
+  }
+
+  async _sendToClaude(prompt) {
+    const encoded = encodeURIComponent(prompt);
+    const url = `claude://context?text=${encoded}`;
+    try {
+      await invoke('plugin:shell|open', { path: url });
+      this._showSelectToast('Sent to Claude');
+    } catch (_) {
+      // Fallback: copy to clipboard
+      await this._writeClipboard(prompt);
+      this._showSelectToast('Claude not found \u2014 copied to clipboard');
+    }
   }
 
   // --- Select: Pipe Prompt ---
@@ -1651,15 +1823,6 @@ class KeyboardEngine {
       }
     }
     this._exitSelectMode();
-  }
-
-  async _selectSendUrl() {
-    // URL endpoint support requires config — show helpful message for now
-    this._showSelectToast('Set [agents] endpoint_url in config.toml');
-    this._selectSubMode = null;
-    this._hideWhichKey();
-    this._showWhichKey('select');
-    this._updateModeBadge();
   }
 
   // --- Select: Toast ---

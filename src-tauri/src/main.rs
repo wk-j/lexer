@@ -6,6 +6,7 @@ mod config;
 mod fs;
 mod highlight;
 mod markdown;
+mod opencode;
 mod state;
 mod theme;
 
@@ -73,6 +74,9 @@ fn main() {
 
     let registry = Arc::new(highlight::LanguageRegistry::build());
     let app_state = Arc::new(Mutex::new(state::AppState::new()));
+    let oc_state = Arc::new(tauri::async_runtime::Mutex::new(
+        opencode::OpenCodeState::new(),
+    ));
 
     // Load user config
     let user_config = config::LexerConfig::load();
@@ -135,6 +139,7 @@ fn main() {
         .manage(registry)
         .manage(app_state)
         .manage(theme_engine.clone())
+        .manage(oc_state)
         .invoke_handler(tauri::generate_handler![
             commands::open_file,
             commands::get_toc,
@@ -158,6 +163,8 @@ fn main() {
             commands::focus_window,
             commands::get_block_sources,
             commands::get_working_directory,
+            commands::discover_opencode,
+            commands::send_to_opencode,
         ])
         .setup(move |app| {
             {

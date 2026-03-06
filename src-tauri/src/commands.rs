@@ -9,6 +9,7 @@ use crate::config::LexerConfig;
 use crate::fs::FileWatcher;
 use crate::highlight::LanguageRegistry;
 use crate::markdown::{render_markdown, TocEntry};
+use crate::opencode::{self, OpenCodeSendResult, OpenCodeState, OpenCodeStatus};
 use crate::state::{AppState, BufferState, LayoutMode};
 use crate::theme::{ThemeEngine, ThemeInfo};
 
@@ -691,4 +692,101 @@ pub fn focus_window(app: AppHandle, window_id: String) -> Result<(), String> {
         .ok_or_else(|| format!("Window not found: {}", window_id))?;
     win.set_focus().map_err(|e: tauri::Error| e.to_string())?;
     Ok(())
+}
+
+// --- OpenCode integration ---
+
+#[tauri::command]
+pub async fn discover_opencode(
+    oc_state: State<'_, Arc<tauri::async_runtime::Mutex<OpenCodeState>>>,
+) -> Result<OpenCodeStatus, String> {
+    let our_cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+    let our_cwd = our_cwd.canonicalize().unwrap_or(our_cwd);
+
+    match opencode::discover(&our_cwd).await {
+        Ok(conn) => {
+            let status = OpenCodeStatus {
+                connected: true,
+                port: Some(conn.port),
+                pid: Some(conn.pid),
+                server_cwd: Some(conn.server_cwd.to_string_lossy().into_owned()),
+                error: None,
+            };
+            let mut oc = oc_state.lock().await;
+            oc.connection = Some(conn);
+            oc.last_error = None;
+            Ok(status)
+        }
+        Err(e) => {
+            let mut oc = oc_state.lock().await;
+            oc.connection = None;
+            oc.last_error = Some(e.clone());
+            Ok(OpenCodeStatus {
+                connected: false,
+                port: None,
+                pid: None,
+                server_cwd: None,
+                error: Some(e),
+            })
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn send_to_opencode(
+    prompt: String,
+    oc_state: State<'_, Arc<tauri::async_runtime::Mutex<OpenCodeState>>>,
+) -> Result<OpenCodeSendResult, String> {
+    let our_cwd = std::env::current_dir().map_err(|e| e.to_string())?;
+    let our_cwd = our_cwd.canonicalize().unwrap_or(our_cwd);
+
+    // Try to send using cached connection first
+    {
+        let oc = oc_state.lock().await;
+        if let Some(ref conn) = oc.connection {
+            match opencode::send_prompt(conn, &prompt).await {
+                Ok(()) => {
+                    return Ok(OpenCodeSendResult {
+                        success: true,
+                        message: "Sent to OpenCode".to_string(),
+                    });
+                }
+                Err(e) => {
+                    tracing::warn!("Cached OpenCode connection failed: {}", e);
+                    // Fall through to rediscovery
+                }
+            }
+        }
+    }
+
+    // Clear cached connection and rediscover
+    {
+        let mut oc = oc_state.lock().await;
+        oc.connection = None;
+    }
+
+    // Rediscover
+    let conn = opencode::discover(&our_cwd).await?;
+
+    // Try sending with fresh connection
+    let result = opencode::send_prompt(&conn, &prompt).await;
+
+    let mut oc = oc_state.lock().await;
+    match result {
+        Ok(()) => {
+            oc.connection = Some(conn);
+            oc.last_error = None;
+            Ok(OpenCodeSendResult {
+                success: true,
+                message: "Sent to OpenCode".to_string(),
+            })
+        }
+        Err(e) => {
+            oc.last_error = Some(e.clone());
+            Ok(OpenCodeSendResult {
+                success: false,
+                message: e,
+            })
+        }
+    }
 }
