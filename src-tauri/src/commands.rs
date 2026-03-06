@@ -5,6 +5,7 @@ use std::time::UNIX_EPOCH;
 use tauri::{AppHandle, Emitter, Manager, State};
 use walkdir::WalkDir;
 
+use crate::config::LexerConfig;
 use crate::fs::FileWatcher;
 use crate::highlight::LanguageRegistry;
 use crate::markdown::{render_markdown, TocEntry};
@@ -546,6 +547,16 @@ pub fn get_recent_files(state: State<'_, Arc<Mutex<AppState>>>) -> Result<Vec<St
         .collect())
 }
 
+// --- Working directory ---
+
+/// Return the process working directory (where `lexer` was launched from).
+#[tauri::command]
+pub fn get_working_directory() -> Result<String, String> {
+    std::env::current_dir()
+        .map(|p| p.to_string_lossy().into_owned())
+        .map_err(|e| e.to_string())
+}
+
 // --- Theme commands ---
 
 #[tauri::command]
@@ -569,7 +580,11 @@ pub fn load_theme(
 ) -> Result<ThemeResult, String> {
     let mut engine = theme_engine.lock().map_err(|e| e.to_string())?;
     let theme = engine.load_theme(&name)?;
-    engine.active_theme = name;
+    engine.active_theme = name.clone();
+
+    // Persist selected theme to config file
+    LexerConfig::set_field("appearance", "theme", &name);
+
     Ok(ThemeResult {
         name: theme.meta.name,
         css: theme.css,

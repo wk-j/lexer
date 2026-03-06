@@ -11,21 +11,21 @@ class CommandPalette {
 
     this.visible = false;
     this.mode = 'file';        // file | command | heading | theme | recent | search
+    this.fileScope = 'cwd'; // 'cwd' | 'directory' — determines file search root
     this.items = [];            // current candidate list
     this.filtered = [];         // after fuzzy filtering
     this.selectedIndex = 0;
     this._renderingFromKeyboard = false; // suppress mouseenter during keyboard-driven renders
 
-    // Cache
-    this._fileCache = null;
-    this._fileCacheDir = null;
+    // Cache (keyed by directory path)
+    this._fileCache = {};       // { dir: items[] }
 
     this._bindEvents();
   }
 
   // --- Public API ---
 
-  open(prefix) {
+  open(prefix, scope) {
     this.visible = true;
     this.overlay.classList.add('visible');
     this.selectedIndex = 0;
@@ -42,10 +42,15 @@ class CommandPalette {
     };
     this.mode = modeMap[prefix] || 'file';
 
+    // File scope: 'project' (default) or 'directory'
+    if (this.mode === 'file' && scope) {
+      this.fileScope = scope;
+    }
+
     // Set input with prefix
     this.input.value = prefix || '';
     const placeholders = {
-      file: 'Search files...',
+      file: this.fileScope === 'directory' ? 'Search files in buffer directory...' : 'Search files in working directory...',
       command: 'Type a command...',
       heading: 'Jump to heading...',
       theme: 'Pick a theme...',
@@ -109,6 +114,11 @@ class CommandPalette {
         this._select(this.selectedIndex - 1);
         return;
       }
+      if (e.key === 'Tab' && this.mode === 'file') {
+        e.preventDefault();
+        this._toggleFileScope();
+        return;
+      }
       if (e.key === 'Enter') {
         e.preventDefault();
         this._execute();
@@ -130,7 +140,7 @@ class CommandPalette {
 
     // Listen for open-palette events from keyboard engine
     window.addEventListener('open-palette', (e) => {
-      this.open(e.detail.prefix);
+      this.open(e.detail.prefix, e.detail.scope);
     });
 
     // Capture-phase handler: intercept ALL keydown events when palette is visible
@@ -161,6 +171,12 @@ class CommandPalette {
         e.preventDefault();
         e.stopPropagation();
         this._select(this.selectedIndex - 1);
+        return;
+      }
+      if (e.key === 'Tab' && this.mode === 'file') {
+        e.preventDefault();
+        e.stopPropagation();
+        this._toggleFileScope();
         return;
       }
       if (e.key === 'Enter') {
@@ -212,17 +228,25 @@ class CommandPalette {
 
   async _loadFiles() {
     try {
-      const currentFile = await invoke('get_current_file');
-      let dir = '.';
-      if (currentFile) {
-        const lastSlash = currentFile.lastIndexOf('/');
-        dir = lastSlash >= 0 ? currentFile.substring(0, lastSlash) : '.';
-        // Go up to find project root (look for common markers)
-        // For now, use the file's directory
+      let dir;
+      if (this.fileScope === 'directory') {
+        // Current buffer's parent directory
+        const currentFile = await invoke('get_current_file');
+        if (currentFile) {
+          const lastSlash = currentFile.lastIndexOf('/');
+          dir = lastSlash >= 0 ? currentFile.substring(0, lastSlash) : '.';
+        } else {
+          dir = '.';
+        }
+      } else {
+        // Working directory (where lexer was launched)
+        dir = await invoke('get_working_directory');
       }
 
-      if (this._fileCacheDir === dir && this._fileCache) {
-        this.items = this._fileCache;
+      // Use cache if available for this directory
+      if (this._fileCache[dir]) {
+        this.items = this._fileCache[dir];
+        this._updateFilePlaceholder();
         return;
       }
 
@@ -233,11 +257,29 @@ class CommandPalette {
         value: dir + '/' + e.path,
         type: 'file',
       }));
-      this._fileCache = this.items;
-      this._fileCacheDir = dir;
+      this._fileCache[dir] = this.items;
+      this._updateFilePlaceholder();
     } catch (err) {
       console.error('scan_directory failed:', err);
       this.items = [];
+    }
+  }
+
+  _toggleFileScope() {
+    this.fileScope = this.fileScope === 'cwd' ? 'directory' : 'cwd';
+    this._loadCandidates().then(() => {
+      this._filter();
+      this._render();
+      this._updateHint();
+    });
+    this._updateFilePlaceholder();
+  }
+
+  _updateFilePlaceholder() {
+    if (this.mode === 'file') {
+      this.input.placeholder = this.fileScope === 'directory'
+        ? 'Search files in buffer directory...'
+        : 'Search files in working directory...';
     }
   }
 
@@ -443,8 +485,9 @@ class CommandPalette {
 
   _updateHint() {
     if (!this.hintEl) return;
+    const scopeLabel = this.fileScope === 'directory' ? 'buffer directory' : 'working directory';
     const hints = {
-      file: 'Type to search files  ·  : commands  ·  # headings  ·  @ themes',
+      file: `Searching ${scopeLabel}  ·  Tab toggle scope  ·  : commands  ·  # headings`,
       command: 'Type to filter commands  ·  Enter to run',
       heading: 'Type to filter headings  ·  Enter to jump',
       theme: 'Type to filter themes  ·  Enter to apply',

@@ -80,7 +80,8 @@ class KeyboardEngine {
       },
 
       space: {
-        'f':  { fn: () => this._openPalette('') },
+        'f':  { fn: () => this._openPalette('', 'cwd') },
+        'F':  { fn: () => this._openPalette('', 'directory') },
         'bb': { fn: () => this._openPalette('%') },
         'bn': { fn: () => window.lexerApp?.nextBuffer() },
         'bp': { fn: () => window.lexerApp?.prevBuffer() },
@@ -136,7 +137,8 @@ class KeyboardEngine {
       space: {
         title: 'Space - Commands',
         keys: [
-          ['f', 'file search'],
+          ['f', 'open file picker'],
+          ['F', 'file picker at buffer directory'],
           ['b', 'buffer...'],
           ['w', 'window/layout...'],
           ['r', 'recent files'],
@@ -260,6 +262,9 @@ class KeyboardEngine {
       return;
     }
 
+    // Ignore bare modifier keys (Shift, Alt, etc.)
+    if (['Shift', 'Alt', 'Meta', 'Control', 'CapsLock'].includes(e.key)) return;
+
     // Ignore other keys with Ctrl/Cmd (let browser/Tauri handle those)
     if (e.ctrlKey || e.metaKey) return;
 
@@ -289,11 +294,15 @@ class KeyboardEngine {
       e.preventDefault();
       this.pending = seq;
       this._updatePending();
-      this._resetTimeout();
       // Show contextual which-key for sub-modes (e.g. Space > b shows buffer menu)
       const subKey = `${this.mode}:${seq}`;
       if (this.whichKeyLabels[subKey]) {
+        // Sub-mode with which-key: wait indefinitely for user input
+        this._clearTimeout();
         this._showWhichKey(subKey);
+      } else {
+        // Ambiguous prefix without which-key: use timeout to disambiguate
+        this._resetTimeout();
       }
       return;
     }
@@ -586,9 +595,9 @@ class KeyboardEngine {
     document.body.classList.toggle('line-numbers');
   }
 
-  _openPalette(prefix) {
+  _openPalette(prefix, scope) {
     // Dispatch custom event for palette.js to handle
-    window.dispatchEvent(new CustomEvent('open-palette', { detail: { prefix } }));
+    window.dispatchEvent(new CustomEvent('open-palette', { detail: { prefix, scope } }));
   }
 
   _closeCurrentBuffer() {
@@ -601,7 +610,7 @@ class KeyboardEngine {
   _newEmptyBuffer() {
     // Open an empty buffer — for now, just open the palette in file mode
     // A true empty buffer would need backend support for buffers without files
-    this._openPalette('');
+    this._openPalette('', 'cwd');
   }
 
   // --- Clipboard, Quit, Sibling File ---

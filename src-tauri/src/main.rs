@@ -157,6 +157,7 @@ fn main() {
             commands::list_windows,
             commands::focus_window,
             commands::get_block_sources,
+            commands::get_working_directory,
         ])
         .setup(move |app| {
             // Apply macOS vibrancy (frosted glass blur behind the window)
