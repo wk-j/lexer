@@ -9,7 +9,6 @@ class EffectsEngine {
     this._initCursorTracking();
     this._initClickRipple();
     this._initScrollObserver();
-    this._initScrollBlurToggle();
     this._initContentObserver();
     this._applyEffects();
   }
@@ -53,21 +52,6 @@ class EffectsEngine {
         }
       }
     }, { threshold: 0.1 });
-  }
-
-  // --- Disable blur while scrolling for performance ---
-
-  _initScrollBlurToggle() {
-    let scrollTimer = null;
-    this.contentEl.addEventListener('scroll', () => {
-      if (!this.contentEl.classList.contains('is-scrolling')) {
-        this.contentEl.classList.add('is-scrolling');
-      }
-      clearTimeout(scrollTimer);
-      scrollTimer = setTimeout(() => {
-        this.contentEl.classList.remove('is-scrolling');
-      }, 150);
-    }, { passive: true });
   }
 
   // --- Content Mutation Observer ---

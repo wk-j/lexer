@@ -55,17 +55,7 @@
 }
 
 /* === Frosted Glass === */
-
-.content-panel {
-  backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
-}
-
-/* Disable blur while scrolling for performance */
-.content-panel.is-scrolling {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
+/* Content panel has no backdrop-filter — background layers blend directly behind it */
 
 /* === Code Block Effects === */
 
