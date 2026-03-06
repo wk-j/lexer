@@ -431,7 +431,64 @@
 
 ---
 
-## Phase 11: Future Enhancements
+## Phase 11: Terminal Detach & Install
+
+- [x] `setsid()` fork on Unix release builds so GUI doesn't block terminal
+- [x] Hidden `--foreground` flag to suppress detach (debugging)
+- [x] `cargo install --path src-tauri` installs binary to `~/.cargo/bin/`
+
+---
+
+## Phase 12: Block Select
+
+### 12.1 Backend — Source Map (`src-tauri/src/markdown/parser.rs`)
+- [x] `BlockSource` struct (start byte, end byte, block type tag)
+- [x] `into_offset_iter()` on pulldown-cmark events for source byte ranges
+- [x] `render_markdown` returns `Vec<BlockSource>` alongside HTML
+- [x] `BufferState` stores `source: String` and `block_sources: Vec<BlockSource>`
+
+### 12.2 Backend — Commands
+- [x] `get_block_sources(indices)` — extracts original Markdown for selected block indices
+- [x] `open_file` and file watcher updated to populate source/block_sources
+- [x] `tauri-plugin-clipboard-manager` added for reliable clipboard writes
+- [x] Clipboard permission in `capabilities/default.json`
+
+### 12.3 Frontend — Block Indexing (`src/app.js`)
+- [x] `indexBlocks()` assigns `data-block-index` to top-level content elements
+- [x] Called after every content render and file reload
+
+### 12.4 Frontend — Select Mode (`src/keyboard.js`)
+- [x] `v` / `V` enter select mode (single block / current section)
+- [x] Navigation: `j`/`k` (line), `d`/`u` (half-page), `G`/`gg` (end/top), `]`/`[` (heading), `{`/`}` (paragraph)
+- [x] Manipulation: `x` (toggle), `o` (invert), `a` (select all)
+- [x] Copy: `y` (Markdown), `Y` (plain text), `c` (AI context XML), `s` (selection to clipboard)
+- [x] Agent sub-mode (`Enter`): `c` (context XML), `o` (open Claude), `p` (pipe command), `u` (URL endpoint)
+- [x] Pipe prompt mini-input for shell command entry
+- [x] Toast notifications for all copy/action feedback
+- [x] `Escape` exits select mode cleanly
+
+### 12.5 Visual Design (`src/style.css`)
+- [x] Selection indicator bar via `::before` pseudo-element (gutter, outside content)
+- [x] `<pre>` block bar repositioned inside padding to avoid `overflow-x` clipping
+- [x] Cursor block highlight (distinct from selected blocks)
+- [x] Toggled block styling
+- [x] Mode badge shows `SEL` in select mode
+
+### 12.6 Theme Integration
+- [x] 6 CSS custom properties: `select_bar`, `select_bg`, `select_cursor_bar`, `select_cursor_bg`, `select_bar_width`, `select_bar_offset`
+- [x] `ThemeColors` struct updated with select fields + `compile_css` mappings
+- [x] All 5 built-in themes updated with selection colors
+
+### 12.7 Not Yet Implemented
+- [ ] Agent config from `config.toml` (`[agents]` section)
+- [ ] Pipe to shell command (falls back to clipboard copy)
+- [ ] URL endpoint action (shows config hint toast)
+- [ ] Pipe command history persistence
+- [ ] Search within selection
+
+---
+
+## Phase 13: Future Enhancements
 
 - [ ] Export to PDF / HTML
 - [ ] Math rendering (KaTeX/MathJax)
@@ -464,4 +521,8 @@
 | `02fd293` | Phase 8+9: Multi-window support + focus layouts |
 | `9c84773` | Fix palette navigation, add link hints (gw), fix which-key popup |
 | `c245189` | Add Ctrl+O/Ctrl+I for prev/next buffer (Helix jumplist) |
-| | Remaining features + Phase 10: CLI, config, recent files, p/q/gn/gp |
+| `73691ae` | Phase 10: CLI args, config file, recent files, and keyboard additions |
+| `6bbf012` | Fix hint label positioning for elements inside tables |
+| `beabe50` | Detach from terminal on launch so the GUI app doesn't block the shell |
+| `805b1b7` | Add Block Select mode spec with AI agent integration |
+| `0e1d102` | Implement Block Select mode with copy, context, and AI agent actions |
