@@ -46,6 +46,10 @@ toml = "0.8"
 # CLI
 clap = { version = "4", features = ["derive"] }
 
+# Unix process detach
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 # Error handling
 anyhow = "1"
 thiserror = "2"

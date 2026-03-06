@@ -33,9 +33,40 @@ struct Cli {
     /// Disable all visual effects
     #[arg(long)]
     no_effects: bool,
+
+    /// Run in foreground (don't detach from terminal)
+    #[arg(long, hide = true)]
+    foreground: bool,
 }
 
 fn main() {
+    // Re-launch as a detached background process so the terminal is not blocked.
+    // Skip if already the detached child (--foreground) or during development.
+    #[cfg(unix)]
+    {
+        let is_foreground = std::env::args().any(|a| a == "--foreground");
+        if !is_foreground && !cfg!(debug_assertions) {
+            use std::os::unix::process::CommandExt;
+            let exe = std::env::current_exe().expect("failed to get current exe");
+            let mut args: Vec<String> = std::env::args().skip(1).collect();
+            args.push("--foreground".to_string());
+            let mut cmd = std::process::Command::new(exe);
+            cmd.args(&args);
+            // Detach from the controlling terminal
+            unsafe {
+                cmd.pre_exec(|| {
+                    libc::setsid();
+                    Ok(())
+                });
+            }
+            cmd.stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null());
+            cmd.spawn().expect("failed to spawn background process");
+            std::process::exit(0);
+        }
+    }
+
     tracing_subscriber::fmt::init();
 
     let cli = Cli::parse();
