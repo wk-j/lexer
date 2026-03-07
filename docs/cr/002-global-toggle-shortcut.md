@@ -1,7 +1,7 @@
 # CR-002: Global Shortcut to Toggle Window Visibility
 
 **Date:** 2026-03-07
-**Status:** Proposed
+**Status:** Implemented
 **Scope:** Window Management, macOS, Config
 **Platform:** macOS first (Linux/Windows follow-up)
 

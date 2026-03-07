@@ -40,6 +40,54 @@ struct Cli {
     foreground: bool,
 }
 
+/// Toggle the main window between visible/focused and hidden.
+/// Used by the global shortcut handler.
+fn toggle_main_window(app: &tauri::AppHandle) {
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+
+    let visible = window.is_visible().unwrap_or(false);
+    let focused = window.is_focused().unwrap_or(false);
+    let minimized = window.is_minimized().unwrap_or(false);
+
+    if visible && focused && !minimized {
+        // Window is front and center — hide it and return focus to previous app
+        #[cfg(target_os = "macos")]
+        {
+            use objc2::MainThreadMarker;
+            use objc2_app_kit::NSApplication;
+            if let Some(mtm) = MainThreadMarker::new() {
+                let ns_app = NSApplication::sharedApplication(mtm);
+                // NSApp.hide() hides the app and activates the previous application
+                ns_app.hide(None);
+            }
+        }
+        #[cfg(not(target_os = "macos"))]
+        {
+            let _ = window.hide();
+        }
+    } else {
+        // Window is hidden, unfocused, or minimized — bring it back
+        if minimized {
+            let _ = window.unminimize();
+        }
+        let _ = window.show();
+        let _ = window.set_focus();
+
+        // macOS: activate the application to bring it to the foreground
+        #[cfg(target_os = "macos")]
+        {
+            use objc2::MainThreadMarker;
+            use objc2_app_kit::NSApplication;
+            if let Some(mtm) = MainThreadMarker::new() {
+                let ns_app = NSApplication::sharedApplication(mtm);
+                ns_app.activate();
+            }
+        }
+    }
+}
+
 fn main() {
     // Re-launch as a detached background process so the terminal is not blocked.
     // Skip if already the detached child (--foreground) or during development.
@@ -131,6 +179,14 @@ fn main() {
         .map(|p| p.to_string_lossy().into_owned())
         .collect();
     let cli_no_effects = cli.no_effects || !user_config.effects_enabled();
+
+    // Parse global toggle shortcut from config (default: Cmd+Shift+L)
+    let toggle_shortcut_str = user_config
+        .shortcuts
+        .toggle_window
+        .clone()
+        .unwrap_or_else(|| "super+shift+l".to_string());
+    let shortcut_disabled = toggle_shortcut_str.is_empty() || toggle_shortcut_str == "none";
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -283,6 +339,40 @@ fn main() {
                         }
                     }
                 });
+            }
+
+            // Register global shortcut for window toggle (macOS)
+            #[cfg(target_os = "macos")]
+            if !shortcut_disabled {
+                use tauri_plugin_global_shortcut::{
+                    Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
+                };
+
+                let toggle_shortcut: Shortcut = toggle_shortcut_str
+                    .parse()
+                    .unwrap_or_else(|_| {
+                        tracing::warn!(
+                            "Invalid toggle_window shortcut '{}', using default Super+Shift+L",
+                            toggle_shortcut_str
+                        );
+                        Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::KeyL)
+                    });
+
+                app.handle().plugin(
+                    tauri_plugin_global_shortcut::Builder::new()
+                        .with_handler(move |handle, shortcut, event| {
+                            if event.state() == ShortcutState::Pressed
+                                && shortcut == &toggle_shortcut
+                            {
+                                toggle_main_window(handle);
+                            }
+                        })
+                        .build(),
+                )?;
+
+                if let Err(e) = app.global_shortcut().register(toggle_shortcut) {
+                    tracing::warn!("Failed to register global shortcut: {}", e);
+                }
             }
 
             Ok(())

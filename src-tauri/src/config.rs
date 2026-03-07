@@ -12,6 +12,8 @@ pub struct LexerConfig {
     #[serde(default)]
     pub effects: EffectsConfig,
     #[serde(default)]
+    pub shortcuts: ShortcutsConfig,
+    #[serde(default)]
     pub commands: Vec<CustomCommand>,
 }
 
@@ -60,6 +62,15 @@ pub struct EffectsConfig {
     pub particles: Option<bool>,
     /// Master toggle: if set to false, disables all effects
     pub enabled: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Default, Clone)]
+#[allow(dead_code)]
+pub struct ShortcutsConfig {
+    /// Global shortcut to toggle window visibility.
+    /// Format: "Super+Shift+KeyL" (Tauri global-shortcut string syntax).
+    /// Set to "" or "none" to disable.
+    pub toggle_window: Option<String>,
 }
 
 fn default_true() -> bool {
