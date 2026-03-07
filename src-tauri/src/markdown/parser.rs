@@ -36,6 +36,8 @@ pub fn render_markdown(
     let mut in_heading = false;
     let mut heading_level: u8 = 0;
     let mut heading_text = String::new();
+    let mut heading_id_counts: std::collections::HashMap<String, usize> =
+        std::collections::HashMap::new();
 
     // Track top-level block boundaries for source map
     let mut block_depth: usize = 0;
@@ -114,7 +116,14 @@ pub fn render_markdown(
             }
             Event::End(TagEnd::Heading(_)) => {
                 in_heading = false;
-                let id = slugify(&heading_text);
+                let base_id = slugify(&heading_text);
+                let count = heading_id_counts.entry(base_id.clone()).or_insert(0);
+                let id = if *count == 0 {
+                    base_id
+                } else {
+                    format!("{}-{}", base_id, count)
+                };
+                *count += 1;
                 toc.push(TocEntry {
                     level: heading_level,
                     text: heading_text.clone(),
@@ -177,4 +186,45 @@ fn slugify(s: &str) -> String {
         .filter(|s| !s.is_empty())
         .collect::<Vec<_>>()
         .join("-")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::highlight::LanguageRegistry;
+
+    #[test]
+    fn test_duplicate_heading_ids_are_unique() {
+        let md = "# Usage\n\nSome text\n\n# Usage\n\nMore text\n\n# Usage\n";
+        let registry = LanguageRegistry::build();
+        let (html, toc, _) = render_markdown(md, &registry);
+
+        // First occurrence: "usage", second: "usage-1", third: "usage-2"
+        assert_eq!(toc[0].id, "usage");
+        assert_eq!(toc[1].id, "usage-1");
+        assert_eq!(toc[2].id, "usage-2");
+
+        // Verify the IDs appear in HTML as well
+        assert!(html.contains(r#"id="usage""#));
+        assert!(html.contains(r#"id="usage-1""#));
+        assert!(html.contains(r#"id="usage-2""#));
+    }
+
+    #[test]
+    fn test_unique_headings_no_suffix() {
+        let md = "# Intro\n\n## Setup\n\n### Usage\n";
+        let registry = LanguageRegistry::build();
+        let (_, toc, _) = render_markdown(md, &registry);
+
+        assert_eq!(toc[0].id, "intro");
+        assert_eq!(toc[1].id, "setup");
+        assert_eq!(toc[2].id, "usage");
+    }
+
+    #[test]
+    fn test_slugify() {
+        assert_eq!(slugify("Hello World"), "hello-world");
+        assert_eq!(slugify("API v2.0"), "api-v2-0");
+        assert_eq!(slugify("  spaces  "), "spaces");
+    }
 }

@@ -10,6 +10,9 @@ class KeyboardEngine {
     this.searchMatches = [];
     this.searchIndex = -1;
 
+    // Scroll speed in pixels per j/k press (configurable via config.toml)
+    this.scrollSpeed = 200;
+
     // DOM refs
     this.contentEl = document.getElementById('content');
     this.modeBadge = document.getElementById('mode-badge');
@@ -29,10 +32,10 @@ class KeyboardEngine {
   _bindKeymaps() {
     this.keymaps = {
       normal: {
-        'j':      { fn: () => this._scroll(120) },
-        'k':      { fn: () => this._scroll(-120) },
-        'ArrowDown': { fn: () => this._scroll(120) },
-        'ArrowUp':   { fn: () => this._scroll(-120) },
+        'j':      { fn: () => this._scroll(this.scrollSpeed) },
+        'k':      { fn: () => this._scroll(-this.scrollSpeed) },
+        'ArrowDown': { fn: () => this._scroll(this.scrollSpeed) },
+        'ArrowUp':   { fn: () => this._scroll(-this.scrollSpeed) },
         'd':      { fn: () => this._scroll(this.contentEl.clientHeight / 2) },
         'u':      { fn: () => this._scroll(-this.contentEl.clientHeight / 2) },
         'f':      { fn: () => this._scroll(this.contentEl.clientHeight) },
@@ -454,22 +457,39 @@ class KeyboardEngine {
   // --- Scroll Actions ---
 
   _scroll(px) {
-    this._animateScroll(this.contentEl.scrollTop + px, 100);
+    // Accumulate with any in-flight scroll target so rapid presses build momentum
+    const el = this.contentEl;
+    const maxScroll = el.scrollHeight - el.clientHeight;
+    const baseTarget = this._scrollTarget != null ? this._scrollTarget : el.scrollTop;
+    const newTarget = Math.max(0, Math.min(baseTarget + px, maxScroll));
+    this._scrollTarget = newTarget;
+    this._animateScroll(newTarget);
   }
 
   _scrollTo(y) {
-    this._animateScroll(y, 300);
+    this._scrollTarget = null; // absolute jump resets accumulation
+    this._animateScroll(y);
   }
 
   // Eased scroll animation using requestAnimationFrame
-  _animateScroll(target, duration) {
+  // Duration scales with distance for a natural feel: short scrolls are quick,
+  // long scrolls (from accumulation or page jumps) take proportionally longer.
+  _animateScroll(target, forceDuration) {
     const el = this.contentEl;
     const start = el.scrollTop;
     const maxScroll = el.scrollHeight - el.clientHeight;
     const dest = Math.max(0, Math.min(target, maxScroll));
     const distance = dest - start;
 
-    if (Math.abs(distance) < 1) return;
+    if (Math.abs(distance) < 1) {
+      this._scrollTarget = null;
+      return;
+    }
+
+    // Scale duration with distance: ~150ms base, longer for big jumps
+    const duration = forceDuration != null
+      ? forceDuration
+      : Math.min(350, Math.max(120, Math.abs(distance) * 0.4));
 
     // Cancel any ongoing scroll animation
     if (this._scrollRaf) cancelAnimationFrame(this._scrollRaf);
@@ -479,14 +499,15 @@ class KeyboardEngine {
     const step = (now) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // Ease-out cubic: 1 - (1 - t)^3
-      const ease = 1 - Math.pow(1 - progress, 3);
+      // Ease-out quint: 1 - (1 - t)^5  — smoother deceleration than cubic
+      const ease = 1 - Math.pow(1 - progress, 5);
       el.scrollTop = start + distance * ease;
 
       if (progress < 1) {
         this._scrollRaf = requestAnimationFrame(step);
       } else {
         this._scrollRaf = null;
+        this._scrollTarget = null;
       }
     };
 

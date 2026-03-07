@@ -14,6 +14,8 @@ pub struct LexerConfig {
     #[serde(default)]
     pub shortcuts: ShortcutsConfig,
     #[serde(default)]
+    pub window: WindowConfig,
+    #[serde(default)]
     pub commands: Vec<CustomCommand>,
 }
 
@@ -35,6 +37,39 @@ fn default_output_mode() -> String {
 }
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone)]
+#[allow(dead_code)]
+pub struct WindowConfig {
+    /// Padding (in points) between the window edges and the screen's usable area.
+    /// A single value applies uniformly to all sides; use [top, right, bottom, left]
+    /// for per-side control.  Defaults to 0 (fill the desktop).
+    pub padding: Option<WindowPadding>,
+}
+
+/// Accepts either a single number or a [top, right, bottom, left] array.
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(untagged)]
+pub enum WindowPadding {
+    Uniform(f64),
+    Sides([f64; 4]),
+}
+
+impl WindowPadding {
+    /// Returns (top, right, bottom, left) in logical points.
+    pub fn to_trbl(&self) -> (f64, f64, f64, f64) {
+        match self {
+            WindowPadding::Uniform(v) => (*v, *v, *v, *v),
+            WindowPadding::Sides([t, r, b, l]) => (*t, *r, *b, *l),
+        }
+    }
+}
+
+impl Default for WindowPadding {
+    fn default() -> Self {
+        WindowPadding::Uniform(0.0)
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Default, Clone)]
 pub struct AppearanceConfig {
     pub theme: Option<String>,
     pub default_layout: Option<String>,
@@ -49,6 +84,8 @@ pub struct BehaviorConfig {
     pub preserve_scroll: bool,
     #[serde(default)]
     pub restore_session: bool,
+    /// Scroll speed for j/k navigation (pixels per keypress). Default: 200.
+    pub scroll_speed: Option<u32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone)]

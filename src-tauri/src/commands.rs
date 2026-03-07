@@ -718,6 +718,7 @@ pub fn open_config_in_editor() -> Result<String, String> {
             "[behavior]\n",
             "# live_reload = true\n",
             "# preserve_scroll = true\n",
+            "# scroll_speed = 200  # pixels per j/k keypress (default: 200)\n",
             "\n",
             "[effects]\n",
             "# enabled = true\n",

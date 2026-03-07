@@ -445,6 +445,11 @@ listen('startup-config', async (event) => {
   if (config.noEffects) {
     document.body.classList.add('effects-off');
   }
+
+  // Apply scroll speed
+  if (config.scrollSpeed && window.lexerKeyboard) {
+    window.lexerKeyboard.scrollSpeed = config.scrollSpeed;
+  }
 });
 
 // --- Block Indexing (for Block Select mode) ---

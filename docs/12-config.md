@@ -49,6 +49,7 @@ default_layout = "default"     # default | focus | zen | split
 live_reload = true             # Watch files for changes
 preserve_scroll = true         # Restore scroll position on buffer switch
 restore_session = true         # Restore windows on launch (future)
+scroll_speed = 200             # Pixels per j/k keypress (default: 200)
 
 [effects]
 enabled = true                 # Master toggle for all visual effects

@@ -22,14 +22,28 @@ The current mode is displayed in the status bar. Unrecognized keys in any mode a
 
 | Key          | Action                                     |
 | ------------ | ------------------------------------------ |
-| `j` / `Down` | Scroll down by line                        |
-| `k` / `Up`   | Scroll up by line                          |
+| `j` / `Down` | Scroll down (default 200px, configurable)  |
+| `k` / `Up`   | Scroll up (default 200px, configurable)    |
 | `d`          | Scroll down half page                       |
 | `u`          | Scroll up half page                         |
 | `f`          | Scroll down full page (PageDown)            |
 | `b`          | Scroll up full page (PageUp)                |
 | `G`          | Scroll to bottom of document                |
 | `g g`        | Scroll to top of document (enters Goto, then `g`) |
+
+The scroll distance for `j`/`k` defaults to 200 pixels and can be configured via `scroll_speed` in `~/.config/lexer/config.toml` (see [12-config.md](12-config.md)).
+
+### Smooth Scrolling & Accumulation
+
+All keyboard-driven scrolling uses an eased animation (ease-out quint: `1 - (1 - t)^5`) via `requestAnimationFrame` for a smooth, natural feel. The animation duration scales dynamically with distance:
+
+| Scroll distance | Duration  |
+| --------------- | --------- |
+| Small (single `j`/`k`)  | ~120ms |
+| Medium (accumulated rapid presses) | ~200-300ms |
+| Large (page jumps, `G`/`gg`) | capped at 350ms |
+
+**Accumulation:** Rapid `j`/`k` presses build on the in-flight scroll target rather than cancelling the current animation. For example, pressing `j` three times quickly scrolls 600px total (3 x 200px), not just 200px from wherever the mid-animation position happens to be. The accumulated target resets when the animation completes or when an absolute jump (`G`, `gg`) is triggered.
 
 **Heading Navigation:**
 

@@ -16,6 +16,7 @@ class CommandPalette {
     this.filtered = [];         // after fuzzy filtering
     this.selectedIndex = 0;
     this._renderingFromKeyboard = false; // suppress mouseenter during keyboard-driven renders
+    this._loadGeneration = 0; // discard stale async results
 
     // Cache (keyed by directory path)
     this._fileCache = {};       // { dir: items[] }
@@ -62,7 +63,9 @@ class CommandPalette {
     this.input.focus();
 
     // Load candidates — re-focus input after async load in case focus was lost
+    const gen = ++this._loadGeneration;
     this._loadCandidates().then(() => {
+      if (gen !== this._loadGeneration) return; // stale — user changed mode or re-opened
       this._filter();
       this._render();
       // Re-assert focus after async load completes
@@ -136,6 +139,12 @@ class CommandPalette {
       if (e.target === this.overlay) {
         this.close();
       }
+    });
+
+    // Clear the keyboard-rendering guard only when the mouse actually moves.
+    // This prevents scrollIntoView-triggered mouseenter from resetting the selection.
+    this.resultsList.addEventListener('mousemove', () => {
+      this._renderingFromKeyboard = false;
     });
 
     // Listen for open-palette events from keyboard engine
@@ -267,7 +276,9 @@ class CommandPalette {
 
   _toggleFileScope() {
     this.fileScope = this.fileScope === 'cwd' ? 'directory' : 'cwd';
+    const gen = ++this._loadGeneration;
     this._loadCandidates().then(() => {
+      if (gen !== this._loadGeneration) return; // stale
       this._filter();
       this._render();
       this._updateHint();
@@ -411,7 +422,9 @@ class CommandPalette {
     const firstChar = raw[0];
     if (prefixMap[firstChar] && this.mode !== prefixMap[firstChar]) {
       this.mode = prefixMap[firstChar];
+      const gen = ++this._loadGeneration;
       this._loadCandidates().then(() => {
+        if (gen !== this._loadGeneration) return; // stale
         this._filter();
         this._render();
       });
@@ -493,10 +506,10 @@ class CommandPalette {
   _select(index) {
     if (this.filtered.length === 0) return;
     this.selectedIndex = ((index % this.filtered.length) + this.filtered.length) % this.filtered.length;
+    // Suppress mouseenter events caused by scrollIntoView moving items under
+    // the cursor. The flag is only cleared when the user actually moves the mouse.
     this._renderingFromKeyboard = true;
     this._render();
-    // Allow mouseenter again after the DOM has settled
-    requestAnimationFrame(() => { this._renderingFromKeyboard = false; });
   }
 
   _updateHint() {
