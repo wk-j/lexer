@@ -106,6 +106,15 @@ select_cursor_bg = "rgba(88, 166, 255, 0.15)"  # Background for cursor block
 select_bar_width = "3px"                    # Width of selection indicator bar
 select_bar_offset = "-16px"                 # Horizontal offset (negative = in gutter)
 
+# GX-style border decoration (Opera GX-inspired neon border)
+gx_border_color_start = "var(--accent)"     # Border gradient start color
+gx_border_color_mid = "var(--accent)"       # Border gradient mid color
+gx_border_color_end = "rgba(88, 166, 255, 0.2)"  # Border gradient end color
+gx_border_width = "1.5px"                   # Border stroke width
+gx_corner_size = "10px"                     # Diagonal cut corner size
+gx_glow_opacity = "0.6"                     # Neon glow intensity (0.0 - 1.0)
+gx_glow_spread = "8px"                      # Neon glow blur radius
+
 [syntax]
 # Tree-sitter highlight token colors
 # These map to .hl-{token} CSS classes in code blocks
@@ -141,6 +150,7 @@ gradient_backdrop = true        # Gradient mesh background
 noise_texture = true            # Noise overlay
 heading_gradient_text = true    # Gradient fill on h1-h3
 scroll_animations = true        # Fade-in on scroll (read by JS, not emitted as CSS)
+gx_border = true                # Opera GX-style neon border (left + top edges with cut corner)
 
 # Tuning
 frosted_blur = "20px"           # Blur radius for frosted glass
@@ -187,6 +197,13 @@ Every field above maps to a CSS custom property. The table below shows the exact
 | `select_cursor_bg` | `--select-cursor-bg` | `rgba(88, 166, 255, 0.15)` |
 | `select_bar_width` | `--select-bar-width` | `3px` |
 | `select_bar_offset` | `--select-bar-offset` | `-16px` |
+| `gx_border_color_start` | `--gx-border-color-start` | `var(--accent)` |
+| `gx_border_color_mid` | `--gx-border-color-mid` | `var(--accent)` |
+| `gx_border_color_end` | `--gx-border-color-end` | `rgba(88, 166, 255, 0.2)` |
+| `gx_border_width` | `--gx-border-width` | `1.5px` |
+| `gx_corner_size` | `--gx-corner-size` | `10px` |
+| `gx_glow_opacity` | `--gx-glow-opacity` | `0.6` |
+| `gx_glow_spread` | `--gx-glow-spread` | `8px` |
 
 ### Syntax Tokens
 
@@ -234,6 +251,7 @@ Only emitted when explicitly set (no hardcoded defaults).
 | `noise_opacity` | `.noise-overlay { opacity }` | float | *(from base)* |
 | `heading_gradient_text` | removes gradient text from h1-h3 when false | bool | `true` |
 | `scroll_animations` | read by JS, not emitted as CSS | bool | *(from base)* |
+| `gx_border` | hides `.gx-border` canvas when false | bool | `true` |
 
 ## Value Precedence
 
@@ -261,9 +279,9 @@ Source: `src-tauri/src/theme/engine.rs`
 Key types:
 - `ThemeFile` — deserialized TOML structure (all fields `Option<T>`)
 - `ThemeMeta` — name, author, base, version
-- `ThemeColors` — 30 color fields
+- `ThemeColors` — 37 color fields (including 7 GX border fields)
 - `ThemeTypography` — 5 typography fields
-- `ThemeEffects` — 8 effect fields
+- `ThemeEffects` — 9 effect fields (including `gx_border` toggle)
 - `ThemeEngine` — file discovery, loading, compilation
 - `compile_css()` — merges theme + base + defaults → CSS string
 

@@ -80,6 +80,60 @@ document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
 }
 ```
 
+## Opera GX-Style Window Border
+
+An Opera GX-inspired neon border runs along the **left and top edges** of the window, connected by a diagonal cut corner in the top-left. It is drawn on a full-viewport `<canvas>` element (`#gx-border`) at `z-index: 9990`.
+
+| Property | Description |
+|---|---|
+| Border path | Open L-shape: bottom-left up the left edge, diagonal cut, across the top edge |
+| Cut corner | Configurable size (`--gx-corner-size`, default 10px). Triangle filled with `--bg-base-opaque` to mask content behind |
+| Neon glow | Multi-pass bloom (3 passes at decreasing intensity) using `--accent` color |
+| Diagonal emphasis | Extra-bright stroke on the cut diagonal with larger glow spread |
+| Theme reactive | Redraws via `MutationObserver` on `<style id="lexer-theme">` changes |
+| Resize handling | Redraws on `window.resize` via `requestAnimationFrame` |
+| Toggleable | `[effects] gx_border = true\|false` in theme TOML. Hidden when `body.effects-off` |
+
+```css
+/* Canvas positioning */
+.gx-border {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 9990;
+    pointer-events: none;
+}
+body.effects-off .gx-border { display: none; }
+```
+
+Theme CSS custom properties:
+
+| CSS Variable | Default | Description |
+|---|---|---|
+| `--gx-border-color-start` | `var(--accent)` | Gradient start color |
+| `--gx-border-color-mid` | `var(--accent)` | Gradient mid color |
+| `--gx-border-color-end` | `rgba(88,166,255,0.2)` | Gradient end color |
+| `--gx-border-width` | `1.5px` | Border stroke width |
+| `--gx-corner-size` | `10px` | Diagonal cut size |
+| `--gx-glow-opacity` | `0.6` | Neon glow intensity |
+| `--gx-glow-spread` | `8px` | Neon glow blur radius |
+
+## Custom Vertical Traffic Lights
+
+Native macOS traffic light buttons are hidden via `objc2` NSWindow API and replaced with custom HTML/CSS/JS buttons in a vertical column layout, positioned in a reserved 36px left strip.
+
+| Property | Value |
+|---|---|
+| Position | `fixed`, `top: 16px`, `left: 14px` |
+| Layout | `flex-direction: column`, `gap: 11px` |
+| Button size | 14px circles |
+| Colors | Close: `#ff5f57`, Minimize: `#febc2e`, Fullscreen: `#28c840` |
+| Hover | Reveals action icons (x, -, arrows), brightness boost |
+| Inactive | Greyed out (`rgba(255,255,255,0.12)`) on window blur |
+| Actions | Close -> `win.close()`, Minimize -> `win.minimize()`, Fullscreen -> toggle `win.setFullscreen()` |
+
+The `.app` container has `margin-left: 36px` to reserve the left strip for the traffic light column and future toolbar/icon use.
+
 ## Particle & Canvas Background Effects
 
 A lightweight `<canvas>` layer sits behind the content panel. It renders ambient particle animations that react to the active theme's color palette. The canvas is GPU-composited and runs at a capped frame rate to stay efficient.
@@ -520,6 +574,9 @@ code_lang_badge = true          # show language label
 # Headings
 heading_gradient_text = true    # gradient fill on headings
 heading_underline_reveal = true # animated underline on scroll-in
+
+# GX border
+gx_border = true                # Opera GX-style neon border (left + top edges with cut corner)
 
 # Images
 image_tilt = true               # 3D tilt on hover
