@@ -1,0 +1,100 @@
+[meta]
+name = "Lexer Terminal"
+author = "Lexer"
+base = "dark"
+version = "1.0.0"
+
+[colors]
+# Backgrounds — fully opaque to block macOS vibrancy
+bg_base = "#0a0a0a"
+bg_base_opaque = "#0a0a0a"
+bg_panel = "#111111"
+bg_panel_border = "rgba(208, 160, 0, 0.18)"
+
+# Text — amber CRT phosphor palette
+text_primary = "#d4a017"
+text_secondary = "#8a6d10"
+text_muted = "#4a3a08"
+
+# Accent — bright amber
+accent = "#f0a000"
+link = "#e8a010"
+link_hover = "#ffc040"
+
+# No gradient mesh — solid black terminal
+gradient_a = "transparent"
+gradient_b = "transparent"
+gradient_c = "transparent"
+
+# Code blocks — opaque dark with amber border, subtle amber glow
+code_bg = "#080808"
+code_border = "rgba(208, 160, 0, 0.30)"
+glow_color = "rgba(240, 160, 0, 0.08)"
+glow_radius = "10px"
+
+# Content elements
+blockquote_border = "#f0a000"
+blockquote_bg = "rgba(240, 160, 0, 0.04)"
+hr_color = "rgba(208, 160, 0, 0.35)"
+table_header_bg = "rgba(208, 160, 0, 0.08)"
+table_border = "rgba(208, 160, 0, 0.18)"
+table_row_alt = "rgba(208, 160, 0, 0.03)"
+
+# Spotlight — warm amber tint
+spotlight_color = "rgba(240, 160, 0, 0.012)"
+
+# Headings — solid amber, no gradient
+heading_gradient = "linear-gradient(135deg, #f0a000, #d4a017)"
+
+# Block select — amber tones
+select_bar = "#f0a000"
+select_bg = "rgba(240, 160, 0, 0.08)"
+select_cursor_bar = "#d4a017"
+select_cursor_bg = "rgba(240, 160, 0, 0.15)"
+select_bar_width = "2px"
+select_bar_offset = "-14px"
+
+# GX border — bright amber terminal bezel
+gx_border_color_start = "#f0a000"
+gx_border_color_mid = "#f0a000"
+gx_border_color_end = "rgba(240, 160, 0, 0.15)"
+gx_border_width = "2px"
+gx_corner_size = "0px"
+gx_glow_opacity = "0.4"
+gx_glow_spread = "6px"
+
+[syntax]
+# Monochromatic amber palette with subtle variation
+keyword = "#f0a000"
+string = "#c8960c"
+comment = "#5a4a10"
+function = "#e8b830"
+type = "#d4a017"
+number = "#e8b830"
+operator = "#d4a017"
+variable = "#c89020"
+punctuation = "#7a6010"
+constant = "#e8b830"
+tag = "#f0a000"
+attribute = "#c8960c"
+property = "#d4a017"
+constructor = "#e8b830"
+embedded = "#d4a017"
+
+[typography]
+# Monospace everywhere for full terminal aesthetic
+font_family = "'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace"
+font_family_mono = "'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace"
+font_size = 15
+line_height = 1.5
+code_font_size = 14
+
+[effects]
+# Minimal effects — clean terminal look
+frosted_glass = false
+gradient_backdrop = false
+noise_texture = true
+noise_opacity = 0.04
+scroll_animations = true
+heading_gradient_text = true
+gx_border = true

@@ -86,7 +86,7 @@
 
 html {
   font-size: var(--font-size);
-  background: transparent;
+  background: var(--bg-base);
 }
 
 body {
@@ -197,7 +197,7 @@ body {
   display: none; /* hidden when no buffers or only one */
   align-items: center;
   height: 32px;
-  background: rgba(22, 27, 34, 0.3);
+  background: var(--panel-bg);
   border-bottom: 1px solid var(--panel-border);
   overflow-x: auto;
   overflow-y: hidden;
@@ -207,8 +207,8 @@ body {
   flex-shrink: 0;
   -webkit-app-region: no-drag;
   user-select: none;
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
 }
 .tab-bar::-webkit-scrollbar { display: none; }
 .tab-bar.visible {
@@ -304,10 +304,10 @@ body {
   font-size: 12px;
   font-family: var(--font-family-mono);
   color: var(--text-muted);
-  background: rgba(22, 27, 34, 0.3);
+  background: var(--panel-bg);
   border-top: 1px solid var(--panel-border);
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
   user-select: none;
   flex-shrink: 0;
   -webkit-app-region: no-drag;
@@ -393,8 +393,8 @@ pre {
   overflow-x: auto;
   margin-bottom: 1em;
   position: relative;
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
 }
 pre code {
   background: none;
@@ -624,9 +624,9 @@ del { color: var(--text-muted); }
   align-items: center;
   gap: 8px;
   padding: 4px 12px;
-  background: rgba(22, 27, 34, 0.4);
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  background: var(--panel-bg);
+  backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
   border-top: 1px solid var(--panel-border);
   flex-shrink: 0;
 }
