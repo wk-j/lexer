@@ -197,6 +197,15 @@ fn main() {
         .unwrap_or_default()
         .to_trbl();
 
+    // Explicit window size from config (overrides fill-desktop when both set)
+    let win_explicit_size: Option<(f64, f64)> = match (
+        user_config.window.width,
+        user_config.window.height,
+    ) {
+        (Some(w), Some(h)) if w > 0.0 && h > 0.0 => Some((w, h)),
+        _ => None,
+    };
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
@@ -270,51 +279,61 @@ fn main() {
                     }
                 }
 
-                // Resize window to fill the usable desktop (minus configured padding)
+                // Resize window: use explicit size from config, or fill the desktop
                 let (pad_top, pad_right, pad_bottom, pad_left) = win_padding;
 
-                #[cfg(target_os = "macos")]
-                {
-                    use objc2::runtime::AnyObject;
-                    use objc2_core_foundation::CGRect;
+                if let Some((ew, eh)) = win_explicit_size {
+                    // Explicit size from [window] width/height — center on screen
+                    let _ = window.set_size(tauri::LogicalSize::new(ew, eh));
+                    let _ = window.center();
+                } else {
+                    // Fill the usable desktop (minus configured padding)
+                    #[cfg(target_os = "macos")]
+                    {
+                        use objc2::runtime::AnyObject;
+                        use objc2_core_foundation::CGRect;
 
-                    unsafe {
-                        let ns_screen: *mut AnyObject =
-                            objc2::msg_send![objc2::class!(NSScreen), mainScreen];
-                        if !ns_screen.is_null() {
-                            // visibleFrame returns the usable area (excludes menu bar & Dock)
-                            let visible: CGRect = objc2::msg_send![ns_screen, visibleFrame];
+                        unsafe {
+                            let ns_screen: *mut AnyObject =
+                                objc2::msg_send![objc2::class!(NSScreen), mainScreen];
+                            if !ns_screen.is_null() {
+                                let visible: CGRect =
+                                    objc2::msg_send![ns_screen, visibleFrame];
 
-                            let vis_w = visible.size.width;
-                            let vis_h = visible.size.height;
-                            let vis_x = visible.origin.x;
-                            let vis_y = visible.origin.y;
+                                let vis_w = visible.size.width;
+                                let vis_h = visible.size.height;
+                                let vis_x = visible.origin.x;
+                                let vis_y = visible.origin.y;
 
-                            let win_w = vis_w - pad_left - pad_right;
-                            let win_h = vis_h - pad_top - pad_bottom;
-                            let _ = window.set_size(tauri::LogicalSize::new(win_w, win_h));
+                                let win_w = vis_w - pad_left - pad_right;
+                                let win_h = vis_h - pad_top - pad_bottom;
+                                let _ =
+                                    window.set_size(tauri::LogicalSize::new(win_w, win_h));
 
-                            // Position: inset from visible area by the configured padding
-                            let x = vis_x + pad_left;
-                            let y = vis_y + pad_bottom; // macOS coords: origin is bottom-left
-                            let _ = window.set_position(tauri::LogicalPosition::new(x, y));
+                                let x = vis_x + pad_left;
+                                let y = vis_y + pad_bottom;
+                                let _ =
+                                    window.set_position(tauri::LogicalPosition::new(x, y));
+                            }
                         }
                     }
-                }
 
-                #[cfg(not(target_os = "macos"))]
-                {
-                    if let Ok(Some(monitor)) = window.current_monitor() {
-                        let screen = monitor.size();
-                        let scale = monitor.scale_factor();
-                        let screen_h = screen.height as f64 / scale;
-                        let screen_w = screen.width as f64 / scale;
-                        let win_w = screen_w - pad_left - pad_right;
-                        let win_h = screen_h - pad_top - pad_bottom;
-                        let _ = window.set_size(tauri::LogicalSize::new(win_w, win_h));
-                        let x = pad_left;
-                        let y = pad_top;
-                        let _ = window.set_position(tauri::LogicalPosition::new(x, y));
+                    #[cfg(not(target_os = "macos"))]
+                    {
+                        if let Ok(Some(monitor)) = window.current_monitor() {
+                            let screen = monitor.size();
+                            let scale = monitor.scale_factor();
+                            let screen_h = screen.height as f64 / scale;
+                            let screen_w = screen.width as f64 / scale;
+                            let win_w = screen_w - pad_left - pad_right;
+                            let win_h = screen_h - pad_top - pad_bottom;
+                            let _ =
+                                window.set_size(tauri::LogicalSize::new(win_w, win_h));
+                            let x = pad_left;
+                            let y = pad_top;
+                            let _ =
+                                window.set_position(tauri::LogicalPosition::new(x, y));
+                        }
                     }
                 }
             }

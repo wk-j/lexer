@@ -43,6 +43,11 @@ pub struct WindowConfig {
     /// A single value applies uniformly to all sides; use [top, right, bottom, left]
     /// for per-side control.  Defaults to 0 (fill the desktop).
     pub padding: Option<WindowPadding>,
+    /// Initial window width in logical points. When set (along with height),
+    /// the window opens at this exact size instead of filling the desktop.
+    pub width: Option<f64>,
+    /// Initial window height in logical points.
+    pub height: Option<f64>,
 }
 
 /// Accepts either a single number or a [top, right, bottom, left] array.
