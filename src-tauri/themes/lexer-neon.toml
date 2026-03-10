@@ -1,0 +1,88 @@
+[meta]
+name = "Lexer Neon"
+author = "Lexer"
+base = "dark"
+version = "1.0.0"
+
+[colors]
+bg_base = "transparent"
+bg_base_opaque = "#0a0a14"
+bg_panel = "rgba(14, 14, 28, 0.60)"
+bg_panel_border = "rgba(138, 43, 226, 0.15)"
+text_primary = "#e0e0ff"
+text_secondary = "#8888aa"
+text_muted = "#444466"
+accent = "#bf5af2"
+link = "#00d4ff"
+link_hover = "#40e0ff"
+gradient_a = "rgba(138, 43, 226, 0.10)"
+gradient_b = "rgba(0, 191, 255, 0.08)"
+gradient_c = "rgba(255, 0, 128, 0.06)"
+code_bg = "rgba(14, 14, 28, 0.50)"
+code_border = "rgba(138, 43, 226, 0.12)"
+glow_color = "rgba(138, 43, 226, 0.30)"
+glow_radius = "25px"
+blockquote_border = "#bf5af2"
+blockquote_bg = "rgba(138, 43, 226, 0.08)"
+hr_color = "rgba(138, 43, 226, 0.3)"
+table_header_bg = "rgba(138, 43, 226, 0.10)"
+table_border = "rgba(138, 43, 226, 0.12)"
+table_row_alt = "rgba(138, 43, 226, 0.03)"
+spotlight_color = "rgba(191, 90, 242, 0.03)"
+heading_gradient = "linear-gradient(135deg, #bf5af2, #00d4ff)"
+select_bar = "#bf5af2"
+select_bg = "rgba(138, 43, 226, 0.12)"
+select_cursor_bar = "#e0e0ff"
+select_cursor_bg = "rgba(138, 43, 226, 0.20)"
+gx_border_color_start = "#bf5af2"
+gx_border_color_mid = "#00d4ff"
+gx_border_color_end = "rgba(0, 212, 255, 0.15)"
+gx_border_width = "1.5px"
+gx_corner_size = "10px"
+gx_glow_opacity = "0.8"
+gx_glow_spread = "12px"
+gx_border_radius = "8px"
+sidebar_glow_color = "rgba(191, 90, 242, 0.35)"
+accent_rgb = "191, 90, 242"
+bokeh_color_1 = "rgba(138, 43, 226, 0.14)"
+bokeh_color_2 = "rgba(0, 191, 255, 0.12)"
+bokeh_color_3 = "rgba(255, 0, 128, 0.10)"
+bokeh_color_4 = "rgba(0, 255, 136, 0.06)"
+bokeh_blur = "90px"
+glass_brightness = "1.08"
+inner_glow_intensity = "1"
+
+[syntax]
+keyword = "#ff6ac1"
+string = "#5af2c0"
+comment = "#666688"
+function = "#bf5af2"
+type = "#00d4ff"
+number = "#ffcc66"
+operator = "#ff6ac1"
+variable = "#ff9e64"
+punctuation = "#666688"
+constant = "#00d4ff"
+tag = "#5af2c0"
+attribute = "#00d4ff"
+property = "#00d4ff"
+constructor = "#ff9e64"
+embedded = "#e0e0ff"
+
+[typography]
+font_size = 16
+line_height = 1.4
+code_font_size = 14
+
+[effects]
+frosted_glass = true
+frosted_blur = "28px"
+frosted_saturate = "200%"
+gradient_backdrop = true
+noise_texture = true
+noise_opacity = 0.03
+scroll_animations = true
+heading_gradient_text = true
+gx_border = true
+gx_border_mode = "full"
+bokeh_orbs = true

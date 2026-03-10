@@ -28,6 +28,22 @@
   transition: background 600ms ease;
 }
 
+/* Ambient bokeh light orbs */
+.bokeh-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(var(--bokeh-blur, 80px));
+  pointer-events: none;
+  animation: bokeh-drift ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes bokeh-drift {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 15px) scale(0.95); }
+  100% { transform: translate(10px, -30px) scale(1.02); }
+}
+
 /* Noise texture overlay */
 .noise-overlay {
   position: fixed;
@@ -68,6 +84,19 @@
 
 /* === Frosted Glass === */
 /* Content panel has no backdrop-filter — background layers blend directly behind it */
+
+/* === Inner Content Glow === */
+.content-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow:
+    inset 0 0 60px rgba(var(--accent-rgb), calc(0.04 * var(--inner-glow-intensity))),
+    inset 0 0 120px rgba(var(--accent-rgb), calc(0.02 * var(--inner-glow-intensity)));
+  border-radius: 0;
+}
 
 /* === Code Block Effects === */
 
@@ -306,6 +335,7 @@
   .particle-canvas { display: none; }
   .cursor-spotlight { display: none; }
   .noise-overlay { display: none; }
+  .bokeh-orb { animation: none !important; }
   .fade-up { opacity: 1; transform: none; }
 }
 
@@ -332,3 +362,5 @@ body.effects-off .content-panel hr { animation: none; box-shadow: none; }
 body.effects-off .content-panel img:hover { transform: none; }
 body.effects-off .fade-up { opacity: 1; transform: none; }
 body.effects-off .gx-border { display: none; }
+body.effects-off .bokeh-orb { display: none; }
+body.effects-off .content-panel::before { box-shadow: none; }

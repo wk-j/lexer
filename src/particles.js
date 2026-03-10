@@ -18,11 +18,14 @@ class ParticleCanvas {
     this.idleTimeout = 30000; // 30s
     this.time = 0;
 
-    // Colors from theme
-    this.colors = ['88, 166, 255', '210, 168, 255', '126, 231, 135'];
+    // Colors from theme (read dynamically, fallback to defaults)
+    this._defaultColors = ['88, 166, 255', '210, 168, 255', '126, 231, 135'];
+    this.colors = [...this._defaultColors];
+    this._readThemeColors();
 
     this._resize();
     this._bindEvents();
+    this._watchTheme();
   }
 
   // --- Public API ---
@@ -78,6 +81,62 @@ class ParticleCanvas {
         this.resume();
       }
     });
+  }
+
+  _readThemeColors() {
+    try {
+      const styles = getComputedStyle(document.documentElement);
+      const parseRgb = (val) => {
+        if (!val) return null;
+        val = val.trim();
+        // Try "r, g, b" format (from --accent-rgb)
+        if (/^\d+\s*,\s*\d+\s*,\s*\d+$/.test(val)) return val;
+        // Try hex
+        const hex = val.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+        if (hex) return `${parseInt(hex[1], 16)}, ${parseInt(hex[2], 16)}, ${parseInt(hex[3], 16)}`;
+        // Try rgb(r, g, b) or rgba(r, g, b, a)
+        const rgb = val.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+        if (rgb) return `${rgb[1]}, ${rgb[2]}, ${rgb[3]}`;
+        return null;
+      };
+
+      const accentRgb = parseRgb(styles.getPropertyValue('--accent-rgb'));
+      const accent = parseRgb(styles.getPropertyValue('--accent'));
+      const gradB = parseRgb(styles.getPropertyValue('--gradient-b'));
+      const gradC = parseRgb(styles.getPropertyValue('--gradient-c'));
+
+      this.colors = [
+        accentRgb || accent || this._defaultColors[0],
+        gradB || this._defaultColors[1],
+        gradC || this._defaultColors[2],
+      ];
+    } catch {
+      this.colors = [...this._defaultColors];
+    }
+  }
+
+  _watchTheme() {
+    const watchForThemeEl = () => {
+      const themeEl = document.getElementById('lexer-theme');
+      if (themeEl) {
+        const observer = new MutationObserver(() => {
+          this._readThemeColors();
+        });
+        observer.observe(themeEl, { childList: true, characterData: true, subtree: true });
+      } else {
+        const headObs = new MutationObserver(() => {
+          const el = document.getElementById('lexer-theme');
+          if (el) {
+            headObs.disconnect();
+            this._readThemeColors();
+            const observer = new MutationObserver(() => this._readThemeColors());
+            observer.observe(el, { childList: true, characterData: true, subtree: true });
+          }
+        });
+        headObs.observe(document.head, { childList: true });
+      }
+    };
+    watchForThemeEl();
   }
 
   _resize() {

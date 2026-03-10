@@ -49,6 +49,18 @@
   --gx-corner-size: 10px;
   --gx-glow-opacity: 0.6;
   --gx-glow-spread: 8px;
+  --gx-border-radius: 8px;
+
+  /* Neon glassmorphism */
+  --glass-brightness: 1.05;
+  --accent-rgb: 88, 166, 255;
+  --sidebar-glow-color: rgba(88, 166, 255, 0.3);
+  --inner-glow-intensity: 1;
+  --bokeh-color-1: rgba(138, 43, 226, 0.12);
+  --bokeh-color-2: rgba(0, 191, 255, 0.10);
+  --bokeh-color-3: rgba(255, 0, 128, 0.08);
+  --bokeh-color-4: rgba(0, 255, 136, 0.06);
+  --bokeh-blur: 80px;
 
   /* Block select */
   --select-bar: var(--accent);
@@ -207,8 +219,8 @@ body {
   flex-shrink: 0;
   -webkit-app-region: no-drag;
   user-select: none;
-  backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  backdrop-filter: blur(var(--blur)) saturate(var(--saturate)) brightness(var(--glass-brightness));
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate)) brightness(var(--glass-brightness));
 }
 .tab-bar::-webkit-scrollbar { display: none; }
 .tab-bar.visible {
@@ -306,8 +318,8 @@ body {
   color: var(--text-muted);
   background: var(--panel-bg);
   border-top: 1px solid var(--panel-border);
-  backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  backdrop-filter: blur(var(--blur)) saturate(var(--saturate)) brightness(var(--glass-brightness));
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate)) brightness(var(--glass-brightness));
   user-select: none;
   flex-shrink: 0;
   -webkit-app-region: no-drag;
@@ -393,8 +405,8 @@ pre {
   overflow-x: auto;
   margin-bottom: 1em;
   position: relative;
-  backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+  backdrop-filter: blur(var(--blur)) saturate(var(--saturate)) brightness(var(--glass-brightness));
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate)) brightness(var(--glass-brightness));
 }
 pre code {
   background: none;

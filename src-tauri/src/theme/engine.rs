@@ -132,6 +132,27 @@ pub struct ThemeColors {
     pub gx_glow_opacity: Option<String>,
     #[serde(default)]
     pub gx_glow_spread: Option<String>,
+    // Neon glassmorphism
+    #[serde(default)]
+    pub gx_border_radius: Option<String>,
+    #[serde(default)]
+    pub glass_brightness: Option<String>,
+    #[serde(default)]
+    pub accent_rgb: Option<String>,
+    #[serde(default)]
+    pub sidebar_glow_color: Option<String>,
+    #[serde(default)]
+    pub inner_glow_intensity: Option<String>,
+    #[serde(default)]
+    pub bokeh_color_1: Option<String>,
+    #[serde(default)]
+    pub bokeh_color_2: Option<String>,
+    #[serde(default)]
+    pub bokeh_color_3: Option<String>,
+    #[serde(default)]
+    pub bokeh_color_4: Option<String>,
+    #[serde(default)]
+    pub bokeh_blur: Option<String>,
 }
 
 impl Default for ThemeColors {
@@ -175,6 +196,16 @@ impl Default for ThemeColors {
             gx_corner_size: None,
             gx_glow_opacity: None,
             gx_glow_spread: None,
+            gx_border_radius: None,
+            glass_brightness: None,
+            accent_rgb: None,
+            sidebar_glow_color: None,
+            inner_glow_intensity: None,
+            bokeh_color_1: None,
+            bokeh_color_2: None,
+            bokeh_color_3: None,
+            bokeh_color_4: None,
+            bokeh_blur: None,
         }
     }
 }
@@ -226,6 +257,10 @@ pub struct ThemeEffects {
     pub heading_gradient_text: Option<bool>,
     #[serde(default)]
     pub gx_border: Option<bool>,
+    #[serde(default)]
+    pub gx_border_mode: Option<String>,
+    #[serde(default)]
+    pub bokeh_orbs: Option<bool>,
 }
 
 impl Default for ThemeEffects {
@@ -240,6 +275,8 @@ impl Default for ThemeEffects {
             scroll_animations: None,
             heading_gradient_text: None,
             gx_border: None,
+            gx_border_mode: None,
+            bokeh_orbs: None,
         }
     }
 }
@@ -634,6 +671,68 @@ fn compile_css(theme: &ThemeFile, base: Option<&ThemeFile>) -> String {
         bc.map(|b| &b.gx_glow_spread),
         "8px"
     );
+    var!(
+        "--gx-border-radius",
+        c.gx_border_radius,
+        bc.map(|b| &b.gx_border_radius),
+        "8px"
+    );
+
+    // Neon glassmorphism
+    var!(
+        "--glass-brightness",
+        c.glass_brightness,
+        bc.map(|b| &b.glass_brightness),
+        "1.05"
+    );
+    var!(
+        "--accent-rgb",
+        c.accent_rgb,
+        bc.map(|b| &b.accent_rgb),
+        "88, 166, 255"
+    );
+    var!(
+        "--sidebar-glow-color",
+        c.sidebar_glow_color,
+        bc.map(|b| &b.sidebar_glow_color),
+        "rgba(88, 166, 255, 0.3)"
+    );
+    var!(
+        "--inner-glow-intensity",
+        c.inner_glow_intensity,
+        bc.map(|b| &b.inner_glow_intensity),
+        "1"
+    );
+    var!(
+        "--bokeh-color-1",
+        c.bokeh_color_1,
+        bc.map(|b| &b.bokeh_color_1),
+        "rgba(138, 43, 226, 0.12)"
+    );
+    var!(
+        "--bokeh-color-2",
+        c.bokeh_color_2,
+        bc.map(|b| &b.bokeh_color_2),
+        "rgba(0, 191, 255, 0.10)"
+    );
+    var!(
+        "--bokeh-color-3",
+        c.bokeh_color_3,
+        bc.map(|b| &b.bokeh_color_3),
+        "rgba(255, 0, 128, 0.08)"
+    );
+    var!(
+        "--bokeh-color-4",
+        c.bokeh_color_4,
+        bc.map(|b| &b.bokeh_color_4),
+        "rgba(0, 255, 136, 0.06)"
+    );
+    var!(
+        "--bokeh-blur",
+        c.bokeh_blur,
+        bc.map(|b| &b.bokeh_blur),
+        "80px"
+    );
 
     // Syntax highlight tokens
     let base_syntax = base.map(|b| &b.syntax);
@@ -749,6 +848,23 @@ fn compile_css(theme: &ThemeFile, base: Option<&ThemeFile>) -> String {
             ".noise-overlay {{ opacity: {} !important; }}\n",
             opacity
         ));
+    }
+
+    // GX border mode (l-shape or full)
+    let gx_mode = e
+        .gx_border_mode
+        .as_deref()
+        .or(be.and_then(|b| b.gx_border_mode.as_deref()))
+        .unwrap_or("l-shape");
+    body_rules.push_str(&format!("body {{ --gx-border-mode: \"{}\"; }}\n", gx_mode));
+
+    // Bokeh orbs toggle
+    let bokeh = e
+        .bokeh_orbs
+        .or(be.and_then(|b| b.bokeh_orbs))
+        .unwrap_or(false);
+    if !bokeh {
+        body_rules.push_str(".bokeh-orb { display: none !important; }\n");
     }
 
     css.push_str(&body_rules);

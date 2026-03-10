@@ -7,6 +7,7 @@ class EffectsEngine {
     this.observer = null;
     this.lightboxEl = null;
     this._initGXBorder();
+    this._initBokehOrbs();
     this._initCursorTracking();
     this._initClickRipple();
     this._initScrollObserver();
@@ -80,63 +81,153 @@ class EffectsEngine {
 
     ctx.clearRect(0, 0, w, h);
 
-    // Opera GX-style: only left edge + cut diagonal + top edge (open L-shape)
+    // Detect border mode: "full" or "l-shape" (default)
+    const mode = styles.getPropertyValue('--gx-border-mode').trim().replace(/"/g, '') || 'l-shape';
+    const borderRadius = parseFloat(styles.getPropertyValue('--gx-border-radius')) || 8;
+
     const inset = bw / 2 + 0.5;
-    const buildPath = () => {
+
+    if (mode === 'full') {
+      // Full-perimeter rounded rectangle with neon glow
+      const r = borderRadius;
+      const buildFullPath = () => {
+        ctx.beginPath();
+        ctx.moveTo(inset + r, inset);
+        ctx.lineTo(w - inset - r, inset);
+        ctx.arcTo(w - inset, inset, w - inset, inset + r, r);
+        ctx.lineTo(w - inset, h - inset - r);
+        ctx.arcTo(w - inset, h - inset, w - inset - r, h - inset, r);
+        ctx.lineTo(inset + r, h - inset);
+        ctx.arcTo(inset, h - inset, inset, h - inset - r, r);
+        ctx.lineTo(inset, inset + r);
+        ctx.arcTo(inset, inset, inset + r, inset, r);
+        ctx.closePath();
+      };
+
+      // Glow passes (4 for full mode)
+      ctx.save();
+      for (let i = 4; i >= 1; i--) {
+        buildFullPath();
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = bw + i * 2;
+        ctx.globalAlpha = glowOpacity * (0.25 / i);
+        ctx.shadowColor = accent;
+        ctx.shadowBlur = glowSpread * i * 2;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Sharp border
+      ctx.save();
+      buildFullPath();
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = bw;
+      ctx.globalAlpha = 1;
+      ctx.shadowColor = accent;
+      ctx.shadowBlur = glowSpread;
+      ctx.stroke();
+      ctx.restore();
+    } else {
+      // Original L-shape mode
+      const buildPath = () => {
+        ctx.beginPath();
+        ctx.moveTo(inset, h);                       // bottom-left
+        ctx.lineTo(inset, cs + inset);              // left edge up to cut
+        ctx.lineTo(cs + inset, inset);              // diagonal cut
+        ctx.lineTo(w, inset);                       // top edge to right
+      };
+
+      // 1) Fill the cut corner triangle with opaque bg to mask content behind
+      ctx.save();
       ctx.beginPath();
-      ctx.moveTo(inset, h);                       // bottom-left
-      ctx.lineTo(inset, cs + inset);              // left edge up to cut
-      ctx.lineTo(cs + inset, inset);              // diagonal cut
-      ctx.lineTo(w, inset);                       // top edge to right
-    };
+      ctx.moveTo(0, 0);
+      ctx.lineTo(cs + inset + 1, 0);
+      ctx.lineTo(0, cs + inset + 1);
+      ctx.closePath();
+      ctx.fillStyle = bgOpaque;
+      ctx.fill();
+      ctx.restore();
 
-    // 1) Fill the cut corner triangle with opaque bg to mask content behind
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(cs + inset + 1, 0);
-    ctx.lineTo(0, cs + inset + 1);
-    ctx.closePath();
-    ctx.fillStyle = bgOpaque;
-    ctx.fill();
-    ctx.restore();
+      // 2) Draw glow layer (multiple passes for neon bloom)
+      ctx.save();
+      for (let i = 3; i >= 1; i--) {
+        buildPath();
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = bw + i * 2;
+        ctx.globalAlpha = glowOpacity * (0.3 / i);
+        ctx.shadowColor = accent;
+        ctx.shadowBlur = glowSpread * i * 2;
+        ctx.stroke();
+      }
+      ctx.restore();
 
-    // 2) Draw glow layer (multiple passes for neon bloom)
-    ctx.save();
-    for (let i = 3; i >= 1; i--) {
+      // 3) Draw sharp border line
+      ctx.save();
       buildPath();
       ctx.strokeStyle = accent;
-      ctx.lineWidth = bw + i * 2;
-      ctx.globalAlpha = glowOpacity * (0.3 / i);
+      ctx.lineWidth = bw;
+      ctx.globalAlpha = 1;
       ctx.shadowColor = accent;
-      ctx.shadowBlur = glowSpread * i * 2;
+      ctx.shadowBlur = glowSpread;
       ctx.stroke();
+      ctx.restore();
+
+      // 4) Brighter accent on the cut diagonal for emphasis
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(inset, cs + inset);
+      ctx.lineTo(cs + inset, inset);
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = bw + 0.5;
+      ctx.globalAlpha = 1;
+      ctx.shadowColor = accent;
+      ctx.shadowBlur = glowSpread * 3;
+      ctx.stroke();
+      ctx.restore();
     }
-    ctx.restore();
+  }
 
-    // 3) Draw sharp border line
-    ctx.save();
-    buildPath();
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = bw;
-    ctx.globalAlpha = 1;
-    ctx.shadowColor = accent;
-    ctx.shadowBlur = glowSpread;
-    ctx.stroke();
-    ctx.restore();
+  // --- Ambient Bokeh Orbs ---
 
-    // 4) Brighter accent on the cut diagonal for emphasis
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(inset, cs + inset);
-    ctx.lineTo(cs + inset, inset);
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = bw + 0.5;
-    ctx.globalAlpha = 1;
-    ctx.shadowColor = accent;
-    ctx.shadowBlur = glowSpread * 3;
-    ctx.stroke();
-    ctx.restore();
+  _initBokehOrbs() {
+    const backdrop = document.querySelector('.app-backdrop');
+    if (!backdrop) return;
+
+    this._bokehOrbs = [];
+    const colors = ['--bokeh-color-1', '--bokeh-color-2', '--bokeh-color-3', '--bokeh-color-4'];
+    const count = 6;
+
+    for (let i = 0; i < count; i++) {
+      const orb = document.createElement('div');
+      orb.className = 'bokeh-orb';
+      const colorVar = colors[i % colors.length];
+      const size = 150 + Math.random() * 250; // 150-400px
+      const x = Math.random() * 100;
+      const y = Math.random() * 100;
+      const duration = 20 + Math.random() * 20; // 20-40s
+      const delay = Math.random() * -20; // stagger
+
+      orb.style.cssText = `
+        width: ${size}px;
+        height: ${size}px;
+        left: ${x}%;
+        top: ${y}%;
+        background: radial-gradient(circle, var(${colorVar}), transparent 70%);
+        animation-duration: ${duration}s;
+        animation-delay: ${delay}s;
+      `;
+      backdrop.appendChild(orb);
+      this._bokehOrbs.push(orb);
+    }
+
+    // Update orb colors on theme change
+    const themeEl = document.getElementById('lexer-theme');
+    if (themeEl) {
+      const observer = new MutationObserver(() => {
+        // Colors update automatically via CSS variables — no JS needed
+      });
+      observer.observe(themeEl, { childList: true, characterData: true, subtree: true });
+    }
   }
 
   // --- Cursor Spotlight ---
