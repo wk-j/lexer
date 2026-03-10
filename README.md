@@ -2,6 +2,8 @@
 
 A fast, keyboard-driven Markdown viewer built with Rust and Tauri v2.
 
+![](docs/images/SCR-20260310-rhbv.jpeg)
+
 ## Features
 
 - **Tree-sitter highlighting** -- grammar-based syntax coloring for 13+ languages
